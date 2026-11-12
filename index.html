@@ -1,0 +1,1791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tampa Theatre: Second Century Board Simulation — MGT 431</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: #f8f5f2;
+      color: #1f2937;
+    }
+    .theatre-gradient {
+      background: linear-gradient(135deg, #581524 0%, #7c1f34 55%, #9a3412 100%);
+    }
+    .gold-badge {
+      background: linear-gradient(90deg, #fef3c7 0%, #fde68a 100%);
+      color: #92400e;
+      border: 1px solid #f59e0b;
+    }
+    @media print {
+      .no-print { display: none !important; }
+      body { background: #ffffff; }
+      .print-only-card { box-shadow: none !important; border: 1px solid #d1d5db !important; }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <!-- Toast Notification -->
+  <div id="toast-banner" class="fixed bottom-5 right-5 z-50 hidden max-w-sm bg-stone-900 text-amber-100 px-4 py-3 rounded-xl shadow-2xl border border-amber-500/40 flex items-center gap-3 transition-all duration-200 no-print">
+    <span id="toast-icon" class="text-amber-400 font-bold text-lg">&#9733;</span>
+    <span id="toast-message" class="text-sm font-medium">Action completed.</span>
+  </div>
+
+  <!-- Top Header & Live 50-Min Classroom Timer Bar -->
+  <header class="theatre-gradient text-white shadow-lg sticky top-0 z-40 no-print">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-4">
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="gold-badge text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full">MGT 431 &bull; Fall 2026</span>
+          <span class="text-amber-200/90 text-xs font-medium">The University of Tampa &bull; Sykes College of Business</span>
+        </div>
+        <h1 class="text-lg sm:text-xl font-extrabold tracking-tight mt-0.5">Tampa Theatre: Second Century Board Simulation</h1>
+      </div>
+
+      <!-- Live 50-Minute Simulation Timer Controls -->
+      <div class="bg-black/30 backdrop-blur-sm border border-white/15 rounded-xl px-3.5 py-2 flex flex-wrap items-center gap-3">
+        <div>
+          <div class="text-[11px] uppercase tracking-wider text-amber-200 font-semibold" id="timer-phase-label">Phase 1: Role Briefing (00–08m)</div>
+          <div class="flex items-baseline gap-2">
+            <span id="timer-display" class="font-mono text-2xl font-extrabold text-white">50:00</span>
+            <span id="timer-substatus" class="text-xs text-amber-300 font-medium">Ready</span>
+          </div>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <button id="btn-timer-toggle" onclick="toggleTimer()" class="bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold text-xs px-3 py-1.5 rounded-lg transition">Start</button>
+          <button id="btn-timer-prev" onclick="stepPhase(-1)" class="bg-white/10 hover:bg-white/20 text-white text-xs px-2.5 py-1.5 rounded-lg transition" title="Previous Simulation Phase">« Phase</button>
+          <button id="btn-timer-next" onclick="stepPhase(1)" class="bg-white/10 hover:bg-white/20 text-white text-xs px-2.5 py-1.5 rounded-lg transition" title="Next Simulation Phase">Phase »</button>
+          <button id="btn-timer-reset" onclick="resetTimer()" class="bg-white/10 hover:bg-white/20 text-white text-xs px-2.5 py-1.5 rounded-lg transition" title="Reset 50-Min Timer">Reset</button>
+          <button id="btn-audio-mute" onclick="toggleMute()" class="bg-white/10 hover:bg-white/20 text-amber-200 text-xs px-2.5 py-1.5 rounded-lg transition" title="Toggle Phase Chime">Chime: ON</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Phase Progress Strip -->
+    <div class="bg-black/40 border-t border-white/10">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 py-1.5 flex items-center justify-between gap-2 overflow-x-auto text-xs">
+        <button id="phase-pill-0" onclick="jumpToPhase(0)" class="px-2.5 py-1 rounded-md font-semibold bg-amber-500 text-stone-950 whitespace-nowrap transition">1. Role Briefing (8m)</button>
+        <button id="phase-pill-1" onclick="jumpToPhase(1)" class="px-2.5 py-1 rounded-md font-medium text-amber-100 hover:bg-white/10 whitespace-nowrap transition">2. Ch. 6 & 8 Scope Debate (14m)</button>
+        <button id="phase-pill-2" onclick="jumpToPhase(2)" class="px-2.5 py-1 rounded-md font-medium text-amber-100 hover:bg-white/10 whitespace-nowrap transition">3. Ch. 11 & 12 Curveball & Controls (12m)</button>
+        <button id="phase-pill-3" onclick="jumpToPhase(3)" class="px-2.5 py-1 rounded-md font-medium text-amber-100 hover:bg-white/10 whitespace-nowrap transition">4. Milestone 3 Scoring & Charter (8m)</button>
+        <button id="phase-pill-4" onclick="jumpToPhase(4)" class="px-2.5 py-1 rounded-md font-medium text-amber-100 hover:bg-white/10 whitespace-nowrap transition">5. Plenary Roll-Call & Debrief (8m)</button>
+      </div>
+    </div>
+
+    <!-- Main Navigation Tabs -->
+    <nav class="bg-stone-900/90 border-t border-white/10">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 flex items-center gap-1 overflow-x-auto py-1.5">
+        <button id="nav-tab-command" onclick="switchTab('command')" class="px-3.5 py-2 rounded-lg text-xs sm:text-sm font-bold bg-rose-900 text-amber-200 whitespace-nowrap transition">1. Case Brief & Run-of-Show</button>
+        <button id="nav-tab-roles" onclick="switchTab('roles')" class="px-3.5 py-2 rounded-lg text-xs sm:text-sm font-medium text-stone-300 hover:text-white hover:bg-white/10 whitespace-nowrap transition">2. Board Role Briefs (4 Chairs)</button>
+        <button id="nav-tab-strategy" onclick="switchTab('strategy')" class="px-3.5 py-2 rounded-lg text-xs sm:text-sm font-medium text-stone-300 hover:text-white hover:bg-white/10 whitespace-nowrap transition">3. Ch. 6 & Ch. 8 Strategy Lab</button>
+        <button id="nav-tab-governance" onclick="switchTab('governance')" class="px-3.5 py-2 rounded-lg text-xs sm:text-sm font-medium text-stone-300 hover:text-white hover:bg-white/10 whitespace-nowrap transition">4. Ch. 11 & 12 Curveballs & Feasibility</button>
+        <button id="nav-tab-charter" onclick="switchTab('charter')" class="px-3.5 py-2 rounded-lg text-xs sm:text-sm font-medium text-stone-300 hover:text-white hover:bg-white/10 whitespace-nowrap transition">5. 2027 Pilot Charter & Rubric</button>
+      </div>
+    </nav>
+  </header>
+
+  <!-- Active Phase Guidance Banner -->
+  <div class="bg-amber-50 border-b border-amber-200 no-print">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-2.5 flex flex-wrap items-center justify-between gap-2 text-xs sm:text-sm">
+      <div class="flex items-center gap-2">
+        <span class="bg-rose-900 text-white font-bold px-2 py-0.5 rounded text-xs uppercase" id="active-phase-badge">Phase 1 Active</span>
+        <span class="font-semibold text-stone-800" id="active-phase-prompt">Assign Roles 1–4 at your Board table, review the baseline case metrics below, and prepare a 60-second opening statement from your committee lens.</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="text-xs font-medium text-stone-600">Active Curveball:</span>
+        <span id="header-curveball-badge" class="text-xs font-bold px-2 py-0.5 rounded bg-stone-200 text-stone-700">None Injected Yet</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Workspace Container -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6">
+
+    <!-- ==================== TAB 1: CASE BRIEF & 50-MIN RUN-OF-SHOW ==================== -->
+    <section id="tab-command" class="space-y-6">
+      <!-- Top Hero Brief Card -->
+      <div class="bg-white rounded-2xl shadow-sm border border-stone-200 p-5 sm:p-6">
+        <div class="flex flex-wrap items-start justify-between gap-4 border-b border-stone-100 pb-4">
+          <div class="max-w-3xl">
+            <span class="text-xs font-bold uppercase tracking-wider text-rose-800">Late 2026 Special Board Session • Downtown Tampa, FL</span>
+            <h2 class="text-xl sm:text-2xl font-extrabold text-stone-900 mt-1">Strategic Question: Transforming the 3,000-Sq-Ft Florida Ave. Education Wing into a Sustainable Asset</h2>
+            <p class="text-sm text-stone-600 mt-2 leading-relaxed">
+              Built in <strong>1926</strong> by architect <strong>John Eberson</strong> and listed on the National Register of Historical Places in <strong>1978</strong> after its <strong>1973</strong> civic rescue, Tampa Theatre’s mission is <em>“building community through extraordinary entertainment in an iconic landmark.”</em> With construction finishing in late 2026 on a two-story, <strong>3,000-sq-ft education wing</strong> welcoming participants in <strong>2027</strong>, the Board must decide which audiences to prioritize, how to balance value drivers (<i>V</i>) and cost drivers (<i>C</i>), whether to build, partner, or buy programming, and how to govern execution without diluting the Theatre’s <strong>70% earned revenue ratio</strong>.
+            </p>
+          </div>
+          <div class="bg-rose-50 border border-rose-200 rounded-xl p-3.5 text-xs space-y-1.5 min-w-[240px]">
+            <div class="font-bold text-rose-900 uppercase tracking-wider">MGT 431 Competition Milestones</div>
+            <div><strong>Kick-Off:</strong> Thur Sept 10 (6:30–8:00pm, Falk Theater)</div>
+            <div><strong>On-Site Tours:</strong> Sept 25 – Oct 6 (10 tours, 35/tour)</div>
+            <div><strong>Finals:</strong> Fri Dec 11 (9:00am–2:00pm, UT: JS #134)</div>
+          </div>
+        </div>
+
+        <!-- KPI Stat Row -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mt-4">
+          <div class="bg-stone-50 border border-stone-200 rounded-xl p-3">
+            <div class="text-[11px] font-semibold text-stone-500 uppercase">2025 Total Revenue</div>
+            <div class="text-xl font-extrabold text-rose-900 mt-0.5">$4.50M</div>
+            <div class="text-[11px] text-stone-600">70% ($3.15M) earned income</div>
+          </div>
+          <div class="bg-stone-50 border border-stone-200 rounded-xl p-3">
+            <div class="text-[11px] font-semibold text-stone-500 uppercase">Historic + Micro Screens</div>
+            <div class="text-xl font-extrabold text-rose-900 mt-0.5">1,200 + 43</div>
+            <div class="text-[11px] text-stone-600">1,238 restored seats + 2024 room</div>
+          </div>
+          <div class="bg-stone-50 border border-stone-200 rounded-xl p-3">
+            <div class="text-[11px] font-semibold text-stone-500 uppercase">New Education Wing</div>
+            <div class="text-xl font-extrabold text-rose-900 mt-0.5">3,000 sq ft</div>
+            <div class="text-[11px] text-stone-600">2-story Florida Ave wing (2027)</div>
+          </div>
+          <div class="bg-stone-50 border border-stone-200 rounded-xl p-3">
+            <div class="text-[11px] font-semibold text-stone-500 uppercase">Annual Utilization</div>
+            <div class="text-xl font-extrabold text-rose-900 mt-0.5">1,000+ Events</div>
+            <div class="text-[11px] text-stone-600">#4 of 155 on TripAdvisor (5.0★)</div>
+          </div>
+          <div class="bg-stone-50 border border-stone-200 rounded-xl p-3">
+            <div class="text-[11px] font-semibold text-stone-500 uppercase">Hillsborough Growth</div>
+            <div class="text-xl font-extrabold text-amber-700 mt-0.5">+7.8%</div>
+            <div class="text-[11px] text-stone-600">2020–25; 20.9% under age 18</div>
+          </div>
+          <div class="bg-stone-50 border border-stone-200 rounded-xl p-3">
+            <div class="text-[11px] font-semibold text-stone-500 uppercase">Gen Z Creator Demand</div>
+            <div class="text-xl font-extrabold text-amber-700 mt-0.5">65%</div>
+            <div class="text-[11px] text-stone-600">Ages 14–24 create video content</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Charts Row: Industry Box Office & Tampa Theatre Revenue Mix -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="bg-white rounded-2xl shadow-sm border border-stone-200 p-5">
+          <div class="flex items-center justify-between mb-3">
+            <div>
+              <h3 class="text-sm font-bold text-stone-900">Figure 2: US & Canada Movie Theatre Industry Revenue ($B, 2018–2025)</h3>
+              <p class="text-xs text-stone-500">Sluggish box-office recovery alongside rising at-home streaming (~$58B in 2025) and studio 6-week window rules.</p>
+            </div>
+            <span class="text-[11px] font-semibold bg-stone-100 text-stone-700 px-2 py-0.5 rounded">Statista (Case p. 2)</span>
+          </div>
+          <div class="relative h-64">
+            <canvas id="chart-industry-boxoffice"></canvas>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-sm border border-stone-200 p-5">
+          <div class="flex items-center justify-between mb-3">
+            <div>
+              <h3 class="text-sm font-bold text-stone-900">Tampa Theatre 2025 Revenue & Stakeholder Funding Structure ($4.5M)</h3>
+              <p class="text-xs text-stone-500">Board mandate: maintain or grow the 70% earned revenue share while honoring public/donor community impact.</p>
+            </div>
+            <span class="text-[11px] font-semibold bg-rose-50 text-rose-800 px-2 py-0.5 rounded">Case p. 5</span>
+          </div>
+          <div class="relative h-64">
+            <canvas id="chart-tt-revenue"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Interactive 50-Minute Run-of-Show Table -->
+      <div class="bg-white rounded-2xl shadow-sm border border-stone-200 p-5">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <div>
+            <h3 class="text-base font-bold text-stone-900">50-Minute Classroom Board Simulation Pacing Guide</h3>
+            <p class="text-xs text-stone-500">Click any row below to jump the classroom timer and load that phase’s workspace tab.</p>
+          </div>
+          <button id="btn-launch-roles" onclick="switchTab('roles')" class="bg-rose-900 hover:bg-rose-800 text-white text-xs font-bold px-3.5 py-2 rounded-lg transition">Go to Step 2: Select Board Roles →</button>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-xs sm:text-sm">
+            <thead>
+              <tr class="bg-stone-900 text-white">
+                <th class="py-2.5 px-3 rounded-tl-lg">Window</th>
+                <th class="py-2.5 px-3">Simulation Phase</th>
+                <th class="py-2.5 px-3">MGT 431 Chapter Lens</th>
+                <th class="py-2.5 px-3">Board Table Deliverable</th>
+                <th class="py-2.5 px-3 rounded-tr-lg text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-stone-200">
+              <tr class="hover:bg-amber-50/60 transition">
+                <td class="py-2.5 px-3 font-mono font-bold text-rose-900">00:00–08:00 (8m)</td>
+                <td class="py-2.5 px-3 font-bold">Phase 1: Role Briefing & Case Immersion</td>
+                <td class="py-2.5 px-3 text-stone-600">Case Overview & Committee Mandates</td>
+                <td class="py-2.5 px-3 text-stone-600">Assign Roles 1–4; prepare a 60-second opening statement from your committee lens.</td>
+                <td class="py-2.5 px-3 text-right"><button onclick="jumpToPhaseAndTab(0, 'roles')" class="text-xs font-bold text-rose-800 hover:underline">Open Roles →</button></td>
+              </tr>
+              <tr class="hover:bg-amber-50/60 transition">
+                <td class="py-2.5 px-3 font-mono font-bold text-rose-900">08:00–22:00 (14m)</td>
+                <td class="py-2.5 px-3 font-bold">Phase 2: Positioning & Scope Debate</td>
+                <td class="py-2.5 px-3 text-stone-600"><strong>Ch. 6</strong> (Value/Cost, Scope) & <strong>Ch. 8</strong> (Build-Partner-Buy)</td>
+                <td class="py-2.5 px-3 text-stone-600">Compare Youth Film Program, Community Arts Program, and Heritage and Corporate Program; pick Value/Cost drivers & partner mode.</td>
+                <td class="py-2.5 px-3 text-right"><button onclick="jumpToPhaseAndTab(1, 'strategy')" class="text-xs font-bold text-rose-800 hover:underline">Open Strategy Lab →</button></td>
+              </tr>
+              <tr class="hover:bg-amber-50/60 transition">
+                <td class="py-2.5 px-3 font-mono font-bold text-rose-900">22:00–34:00 (12m)</td>
+                <td class="py-2.5 px-3 font-bold">Phase 3: Org Design, Controls & Curveball</td>
+                <td class="py-2.5 px-3 text-stone-600"><strong>Ch. 11</strong> (Structure, Controls) & <strong>Ch. 12</strong> (Governance)</td>
+                <td class="py-2.5 px-3 text-stone-600">Inject Minute 22:00 Curveball; configure Org Structure, Input/Output KPIs, & pilot budget model.</td>
+                <td class="py-2.5 px-3 text-right"><button onclick="jumpToPhaseAndTab(2, 'governance')" class="text-xs font-bold text-rose-800 hover:underline">Open Governance Sim →</button></td>
+              </tr>
+              <tr class="hover:bg-amber-50/60 transition">
+                <td class="py-2.5 px-3 font-mono font-bold text-rose-900">34:00–42:00 (8m)</td>
+                <td class="py-2.5 px-3 font-bold">Phase 4: Binding Vote & Pilot Charter</td>
+                <td class="py-2.5 px-3 text-stone-600"><strong>Milestone 2 & 3 Feasibility Synthesis</strong></td>
+                <td class="py-2.5 px-3 text-stone-600">Finalize 8-point 2027 Pilot Charter, record Role 1–4 roll-call votes, and verify operational credibility.</td>
+                <td class="py-2.5 px-3 text-right"><button onclick="jumpToPhaseAndTab(3, 'charter')" class="text-xs font-bold text-rose-800 hover:underline">Open Charter Ballot →</button></td>
+              </tr>
+              <tr class="hover:bg-amber-50/60 transition">
+                <td class="py-2.5 px-3 font-mono font-bold text-rose-900">42:00–50:00 (8m)</td>
+                <td class="py-2.5 px-3 font-bold">Phase 5: Plenary Roll-Call & Debrief</td>
+                <td class="py-2.5 px-3 text-stone-600">Cross-Case Debrief (JetBlue, Wonder, GE, Alphabet, VW)</td>
+                <td class="py-2.5 px-3 text-stone-600">60-second lightning readout per table + UT Spartan Ready Rubric grading.</td>
+                <td class="py-2.5 px-3 text-right"><button onclick="jumpToPhaseAndTab(4, 'charter')" class="text-xs font-bold text-rose-800 hover:underline">Open Rubric & Debrief →</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 2: BOARD STAKEHOLDER ROLE CARDS ==================== -->
+    <section id="tab-roles" class="hidden space-y-6">
+      <div class="bg-white rounded-2xl shadow-sm border border-stone-200 p-5">
+        <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
+          <div>
+            <span class="text-xs font-bold uppercase tracking-wider text-rose-800">Phase 1 & 2 Role-Play Perspectives</span>
+            <h2 class="text-xl font-extrabold text-stone-900">Select a Board Committee Chair Role to Inspect & Take Notes</h2>
+            <p class="text-xs sm:text-sm text-stone-600">Each Board table has 4 Directors representing the four chapters of MGT 431. Click a role below to inspect its strategic bias, probing questions, and non-negotiable vote conditions.</p>
+          </div>
+          <button id="btn-roles-to-strategy" onclick="switchTab('strategy')" class="bg-rose-900 hover:bg-rose-800 text-white text-xs font-bold px-3.5 py-2 rounded-lg transition">Proceed to Ch. 6 & 8 Strategy Lab →</button>
+        </div>
+
+        <!-- 4 Role Selector Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <button id="role-card-btn-0" onclick="selectRole(0)" class="text-left p-4 rounded-xl border-2 border-rose-800 bg-rose-50/50 transition flex flex-col justify-between">
+            <div>
+              <span class="inline-block text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-rose-900 text-white">Role 1 • Ch. 6 & 12</span>
+              <h3 class="text-sm font-extrabold text-stone-900 mt-2">Chair, Finance & Earned Revenue</h3>
+              <p class="text-xs text-stone-600 mt-1">Guards the 70% ($3.15M) earned revenue benchmark, unit cost containment, and break-even utilization.</p>
+            </div>
+            <div class="mt-3 pt-2 border-t border-rose-200/70 flex items-center justify-between text-xs font-bold text-rose-900">
+              <span>Favors: Option A / C</span>
+              <span id="role-vote-pill-0" class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">Vote: Approve</span>
+            </div>
+          </button>
+
+          <button id="role-card-btn-1" onclick="selectRole(1)" class="text-left p-4 rounded-xl border-2 border-stone-200 bg-white hover:border-stone-300 transition flex flex-col justify-between">
+            <div>
+              <span class="inline-block text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-amber-700 text-white">Role 2 • Ch. 12 Shared Value</span>
+              <h3 class="text-sm font-extrabold text-stone-900 mt-2">Chair, Community Impact & Donors</h3>
+              <p class="text-xs text-stone-600 mt-1">Represents City, County, Arts Council, & corporate/member donors; guards against mission drift.</p>
+            </div>
+            <div class="mt-3 pt-2 border-t border-stone-100 flex items-center justify-between text-xs font-bold text-stone-700">
+              <span>Favors: Option B / Hybrid</span>
+              <span id="role-vote-pill-1" class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">Vote: Approve</span>
+            </div>
+          </button>
+
+          <button id="role-card-btn-2" onclick="selectRole(2)" class="text-left p-4 rounded-xl border-2 border-stone-200 bg-white hover:border-stone-300 transition flex flex-col justify-between">
+            <div>
+              <span class="inline-block text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-stone-800 text-white">Role 3 • Ch. 8 Scope</span>
+              <h3 class="text-sm font-extrabold text-stone-900 mt-2">Chair, Partnerships & Scope</h3>
+              <p class="text-xs text-stone-600 mt-1">Champions Related-Constrained Diversification & UT/USF alliances; guards against IP hold-up.</p>
+            </div>
+            <div class="mt-3 pt-2 border-t border-stone-100 flex items-center justify-between text-xs font-bold text-stone-700">
+              <span>Favors: Option A / Hybrid</span>
+              <span id="role-vote-pill-2" class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">Vote: Approve</span>
+            </div>
+          </button>
+
+          <button id="role-card-btn-3" onclick="selectRole(3)" class="text-left p-4 rounded-xl border-2 border-stone-200 bg-white hover:border-stone-300 transition flex flex-col justify-between">
+            <div>
+              <span class="inline-block text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-teal-800 text-white">Role 4 • Ch. 11 Org Design</span>
+              <h3 class="text-sm font-extrabold text-stone-900 mt-2">Chair, Operations & Preservation</h3>
+              <p class="text-xs text-stone-600 mt-1">Protects the 1926 landmark & 1,000-event staff; demands clear owner & Input/Output controls.</p>
+            </div>
+            <div class="mt-3 pt-2 border-t border-stone-100 flex items-center justify-between text-xs font-bold text-stone-700">
+              <span>Favors: Controlled Pilot</span>
+              <span id="role-vote-pill-3" class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">Vote: Approve</span>
+            </div>
+          </button>
+        </div>
+
+        <!-- Detailed Role Inspector Panel -->
+        <div class="mt-6 bg-stone-50 rounded-xl border border-stone-200 p-5 grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="lg:col-span-2 space-y-3">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <span id="role-detail-chapter" class="text-xs font-bold uppercase tracking-wider text-rose-800">ROLE 1 • CH. 6 COST DRIVERS & CH. 12 FINANCIAL FEASIBILITY</span>
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-semibold text-stone-600">Board Member Label (optional):</span>
+                <input id="role-member-label" type="text" oninput="saveRoleMeta()" placeholder="e.g., Director 1" class="text-xs border border-stone-300 rounded-lg px-2.5 py-1 bg-white focus:outline-none focus:border-rose-800">
+              </div>
+            </div>
+            <h3 id="role-detail-title" class="text-lg font-extrabold text-stone-900">Chair, Finance & Earned Revenue Committee</h3>
+            <p id="role-detail-mandate" class="text-sm text-stone-700 leading-relaxed"></p>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+              <div class="bg-white p-3.5 rounded-lg border border-stone-200">
+                <div class="text-xs font-bold text-rose-900 uppercase mb-1.5">Questions to Press in Debate</div>
+                <ul id="role-detail-questions" class="text-xs text-stone-700 space-y-1.5 list-disc pl-4"></ul>
+              </div>
+              <div class="bg-white p-3.5 rounded-lg border border-stone-200">
+                <div class="text-xs font-bold text-amber-800 uppercase mb-1.5">Strategic Bias & Non-Negotiable Vote Condition</div>
+                <p id="role-detail-condition" class="text-xs text-stone-700 leading-relaxed"></p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Role Scratchpad & Vote Toggle -->
+          <div class="bg-white rounded-xl border border-stone-200 p-4 flex flex-col justify-between space-y-3">
+            <div>
+              <div class="flex items-center justify-between mb-1.5">
+                <label for="role-notes-input" class="text-xs font-bold text-stone-800 uppercase">60-Second Opening Statement Notes</label>
+                <button id="btn-autofill-role-note" onclick="prefillRoleArgument()" class="text-[11px] font-semibold text-rose-800 hover:underline">Insert Sample Pitch</button>
+              </div>
+              <textarea id="role-notes-input" rows="5" oninput="saveRoleMeta()" placeholder="Jot down your key argument, numbers from the case, and what you demand in the Pilot Charter..." class="w-full text-xs border border-stone-300 rounded-lg p-2.5 focus:outline-none focus:border-rose-800"></textarea>
+            </div>
+
+            <div class="pt-2 border-t border-stone-100">
+              <div class="text-xs font-bold text-stone-700 mb-2">Current Committee Vote on Table Charter:</div>
+              <div class="grid grid-cols-2 gap-2">
+                <button id="btn-role-approve" onclick="setRoleVote(true)" class="py-2 px-3 rounded-lg text-xs font-bold bg-emerald-600 text-white transition">Approve Charter</button>
+                <button id="btn-role-dissent" onclick="setRoleVote(false)" class="py-2 px-3 rounded-lg text-xs font-bold bg-stone-100 text-stone-700 hover:bg-rose-100 hover:text-rose-900 transition">Dissent / Hold</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 3: CH. 6 & CH. 8 STRATEGY LAB ==================== -->
+    <section id="tab-strategy" class="hidden space-y-6">
+      <div class="bg-white rounded-2xl shadow-sm border border-stone-200 p-5">
+        <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
+          <div>
+            <span class="text-xs font-bold uppercase tracking-wider text-rose-800">Phase 2 Deliberation • Business-Level (Ch. 6) & Corporate-Level Strategy (Ch. 8)</span>
+            <h2 class="text-xl font-extrabold text-stone-900">Compare Three Illustrative Strategic Options & Configure Value/Cost & Partner Mode</h2>
+            <p class="text-xs sm:text-sm text-stone-600">Select a strategic proposal (or the Board Hybrid option) to inspect its competitive set and configure its Ch. 6 Value/Cost Drivers and Ch. 8 Build–Partner–Buy structure.</p>
+          </div>
+          <button id="btn-strategy-to-gov" onclick="switchTab('governance')" class="bg-rose-900 hover:bg-rose-800 text-white text-xs font-bold px-3.5 py-2 rounded-lg transition">Next: Ch. 11 & 12 Curveballs & Sim →</button>
+        </div>
+
+        <!-- 4 Strategic Option Selector Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <button id="opt-card-A" onclick="selectStrategicOption('A')" class="text-left p-4 rounded-xl border-2 border-rose-800 bg-rose-50/50 transition flex flex-col justify-between">
+            <div>
+              <span class="inline-block text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-rose-900 text-white">Option A • Youth Film Program</span>
+              <h3 class="text-sm font-extrabold text-stone-900 mt-2">Youth Film & Creator Academy</h3>
+              <p class="text-xs text-stone-600 mt-1"><strong>Narrow Youth Scope:</strong> Year-round after-school, weekend & summer filmmaking for ages 12–22 (65% Gen Z creator demand).</p>
+            </div>
+            <div class="mt-3 pt-2 border-t border-rose-200/70 text-[11px] font-semibold text-rose-900">
+              Rivals: USF, Patel, Carrollwood Cultural Ctr
+            </div>
+          </button>
+
+          <button id="opt-card-B" onclick="selectStrategicOption('B')" class="text-left p-4 rounded-xl border-2 border-stone-200 bg-white hover:border-stone-300 transition flex flex-col justify-between">
+            <div>
+              <span class="inline-block text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-amber-700 text-white">Option B • Community Arts Program</span>
+              <h3 class="text-sm font-extrabold text-stone-900 mt-2">Year-Round Community Arts Hub</h3>
+              <p class="text-xs text-stone-600 mt-1"><strong>Broad Community Scope:</strong> Multi-disciplinary K–12 school trips, teacher workshops & family arts enrichment.</p>
+            </div>
+            <div class="mt-3 pt-2 border-t border-stone-100 text-[11px] font-semibold text-stone-600">
+              Rivals: Patel, Jobsite, Glazer, Hoffman, TMA
+            </div>
+          </button>
+
+          <button id="opt-card-C" onclick="selectStrategicOption('C')" class="text-left p-4 rounded-xl border-2 border-stone-200 bg-white hover:border-stone-300 transition flex flex-col justify-between">
+            <div>
+              <span class="inline-block text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-stone-800 text-white">Option C • Heritage and Corporate Program</span>
+              <h3 class="text-sm font-extrabold text-stone-900 mt-2">Cultural Heritage & VIP Studio</h3>
+              <p class="text-xs text-stone-600 mt-1"><strong>Adult & Corporate Scope:</strong> Daytime corporate leadership/media rentals, organ/architecture tours & film seminars.</p>
+            </div>
+            <div class="mt-3 pt-2 border-t border-stone-100 text-[11px] font-semibold text-stone-600">
+              Rivals: Straz, Ruth Eckerd, Capitol, CinéBistro
+            </div>
+          </button>
+
+          <button id="opt-card-H" onclick="selectStrategicOption('H')" class="text-left p-4 rounded-xl border-2 border-stone-200 bg-white hover:border-stone-300 transition flex flex-col justify-between">
+            <div>
+              <span class="inline-block text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-teal-800 text-white">Option D • Board Hybrid</span>
+              <h3 class="text-sm font-extrabold text-stone-900 mt-2">Day/Night Cross-Subsidy Model</h3>
+              <p class="text-xs text-stone-600 mt-1"><strong>Segmented Dual Scope:</strong> Daytime corporate/school packages cross-subsidize after-school/weekend Youth Film Labs.</p>
+            </div>
+            <div class="mt-3 pt-2 border-t border-stone-100 text-[11px] font-semibold text-teal-900">
+              Balances 70% Earned Floor + Title I Access
+            </div>
+          </button>
+        </div>
+
+        <!-- Selected Strategy Analytical Breakdown -->
+        <div class="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <!-- Column 1: Ch. 6 Value Drivers & Cost Drivers -->
+          <div class="bg-stone-50 rounded-xl border border-stone-200 p-4 space-y-4">
+            <div>
+              <span class="text-[11px] font-bold uppercase text-rose-800">Ch. 6 Value Innovation (Slide 21)</span>
+              <h3 class="text-sm font-extrabold text-stone-900 mt-0.5">Select Active Value Drivers (<i>V</i>) & Cost Drivers (<i>C</i>)</h3>
+              <p class="text-xs text-stone-600">Check the drivers your Board commits to funding and enforcing:</p>
+            </div>
+
+            <div class="space-y-2">
+              <div class="text-xs font-bold text-stone-800 uppercase">Value Drivers (Raise Perceived Benefit <i>V</i>):</div>
+              <label class="flex items-start gap-2 text-xs bg-white p-2 rounded border border-stone-200 cursor-pointer">
+                <input id="vd-check-0" type="checkbox" checked onchange="updateStrategyAnalysis()" class="mt-0.5 accent-rose-800">
+                <span><strong>Theatre Premiere for Student Work:</strong> Red-carpet showcase in the 1,200-seat palace or 43-seat screening room.</span>
+              </label>
+              <label class="flex items-start gap-2 text-xs bg-white p-2 rounded border border-stone-200 cursor-pointer">
+                <input id="vd-check-1" type="checkbox" checked onchange="updateStrategyAnalysis()" class="mt-0.5 accent-rose-800">
+                <span><strong>Qualified Coaching & Feedback:</strong> Direct mentoring by university film faculty & working filmmakers.</span>
+              </label>
+              <label class="flex items-start gap-2 text-xs bg-white p-2 rounded border border-stone-200 cursor-pointer">
+                <input id="vd-check-2" type="checkbox" checked onchange="updateStrategyAnalysis()" class="mt-0.5 accent-rose-800">
+                <span><strong>Local Stories & Authentic Setting:</strong> Filming & learning inside a 1926 John Eberson landmark.</span>
+              </label>
+              <label class="flex items-start gap-2 text-xs bg-white p-2 rounded border border-stone-200 cursor-pointer">
+                <input id="vd-check-3" type="checkbox" onchange="updateStrategyAnalysis()" class="mt-0.5 accent-rose-800">
+                <span><strong>Convenient Booking & Partner Access:</strong> Integrated school/corporate package scheduling & membership perks.</span>
+              </label>
+            </div>
+
+            <div class="space-y-2 pt-1">
+              <div class="text-xs font-bold text-stone-800 uppercase">Cost Drivers (Contain Unit Delivery Cost <i>C</i>):</div>
+              <label class="flex items-start gap-2 text-xs bg-white p-2 rounded border border-stone-200 cursor-pointer">
+                <input id="cd-check-0" type="checkbox" checked onchange="updateStrategyAnalysis()" class="mt-0.5 accent-amber-700">
+                <span><strong>Reusable Curriculum & Shared Gear:</strong> Modular syllabus & camera/editing kits shared across cohorts.</span>
+              </label>
+              <label class="flex items-start gap-2 text-xs bg-white p-2 rounded border border-stone-200 cursor-pointer">
+                <input id="cd-check-1" type="checkbox" checked onchange="updateStrategyAnalysis()" class="mt-0.5 accent-amber-700">
+                <span><strong>Reliable Partner Terms & Scheduling:</strong> Fixed-rate adjunct/faculty teaching blocks rather than full-time headcount.</span>
+              </label>
+              <label class="flex items-start gap-2 text-xs bg-white p-2 rounded border border-stone-200 cursor-pointer">
+                <input id="cd-check-2" type="checkbox" checked onchange="updateStrategyAnalysis()" class="mt-0.5 accent-amber-700">
+                <span><strong>Standard Formats (Learning Curve):</strong> Repeatable 6-week or weekend cohort templates refined over time.</span>
+              </label>
+              <label class="flex items-start gap-2 text-xs bg-white p-2 rounded border border-stone-200 cursor-pointer">
+                <input id="cd-check-3" type="checkbox" onchange="updateStrategyAnalysis()" class="mt-0.5 accent-amber-700">
+                <span><strong>Group Bookings & Capacity Floor:</strong> Require minimum cohort enrollment (MES) before running a section.</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Column 2: Ch. 8 Corporate Strategy & Build-Partner-Buy Continuum -->
+          <div class="bg-stone-50 rounded-xl border border-stone-200 p-4 space-y-4">
+            <div>
+              <span class="text-[11px] font-bold uppercase text-rose-800">Ch. 8 Corporate Strategy (Slides 5–14)</span>
+              <h3 class="text-sm font-extrabold text-stone-900 mt-0.5">Select Position on the Build–Partner–Buy Continuum</h3>
+              <p class="text-xs text-stone-600">How should Tampa Theatre source curriculum, instructors, and student/partner outreach?</p>
+            </div>
+
+            <div class="space-y-2">
+              <label class="flex items-start gap-2.5 text-xs bg-white p-3 rounded-lg border border-stone-200 cursor-pointer">
+                <input id="bpb-radio-alliance" type="radio" name="bpb-mode" value="Strategic Alliance (UT / USF / Local Film Guilds)" checked onchange="updateStrategyAnalysis()" class="mt-0.5 accent-rose-800">
+                <div>
+                  <div class="font-bold text-stone-900">Strategic Alliance (Co-Developed with UT, USF & Hillsborough Schools)</div>
+                  <div class="text-stone-600 mt-0.5">High integration without full fixed payroll: share university media faculty/interns while Tampa Theatre retains brand, venue control, and curriculum IP.</div>
+                </div>
+              </label>
+
+              <label class="flex items-start gap-2.5 text-xs bg-white p-3 rounded-lg border border-stone-200 cursor-pointer">
+                <input id="bpb-radio-make" type="radio" name="bpb-mode" value="In-House Vertical Integration (Make 100% Internally)" onchange="updateStrategyAnalysis()" class="mt-0.5 accent-rose-800">
+                <div>
+                  <div class="font-bold text-stone-900">In-House “Make” (Full Internal Staff & Curriculum Build)</div>
+                  <div class="text-stone-600 mt-0.5">Maximum quality and scheduling control, but adds high fixed salary overhead and stretches a lean nonprofit team already managing 1,000+ events.</div>
+                </div>
+              </label>
+
+              <label class="flex items-start gap-2.5 text-xs bg-white p-3 rounded-lg border border-stone-200 cursor-pointer">
+                <input id="bpb-radio-contract" type="radio" name="bpb-mode" value="Long-Term Licensing / Instructor Contracts" onchange="updateStrategyAnalysis()" class="mt-0.5 accent-rose-800">
+                <div>
+                  <div class="font-bold text-stone-900">Long-Term Contracts / Licensing (Per-Course Adjuncts)</div>
+                  <div class="text-stone-600 mt-0.5">Flexible per-cohort cost structure, though requires strict Input Controls so independent instructors deliver consistent coaching quality.</div>
+                </div>
+              </label>
+
+              <label class="flex items-start gap-2.5 text-xs bg-white p-3 rounded-lg border border-stone-200 cursor-pointer">
+                <input id="bpb-radio-buy" type="radio" name="bpb-mode" value="Arm's-Length Market Outsourcing (Turnkey Vendor)" onchange="updateStrategyAnalysis()" class="mt-0.5 accent-rose-800">
+                <div>
+                  <div class="font-bold text-stone-900">Arm’s-Length “Buy” (Turnkey Third-Party Vendor)</div>
+                  <div class="text-stone-600 mt-0.5">Lowest administrative effort, but high risk of Principal-Agent hold-up, loss of curriculum IP, and weak connection to Tampa Theatre’s historic brand.</div>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <!-- Column 3: Live Strategic Diagnostic Output -->
+          <div class="bg-white rounded-xl border-2 border-stone-200 p-4 flex flex-col justify-between space-y-4">
+            <div class="space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold uppercase text-stone-500">Live Strategy Diagnostic</span>
+                <span id="diag-status-badge" class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800">Strong Value Innovation</span>
+              </div>
+
+              <div class="p-3 rounded-lg bg-stone-50 border border-stone-200 space-y-1">
+                <div class="text-[11px] font-bold text-stone-500 uppercase">Selected Option & Scope (Ch. 6)</div>
+                <div id="diag-option-name" class="text-sm font-extrabold text-rose-900">Option A: Youth Film Program (Youth Film & Creator Academy)</div>
+                <p id="diag-scope-desc" class="text-xs text-stone-600"></p>
+              </div>
+
+              <div class="p-3 rounded-lg bg-stone-50 border border-stone-200 space-y-1">
+                <div class="text-[11px] font-bold text-stone-500 uppercase">Diversification & Core Competence Fit (Ch. 8)</div>
+                <div id="diag-div-type" class="text-xs font-bold text-stone-900">Related-Constrained Diversification</div>
+                <p id="diag-div-desc" class="text-xs text-stone-600"></p>
+              </div>
+
+              <div class="p-3 rounded-lg bg-amber-50/70 border border-amber-200 space-y-1">
+                <div class="text-[11px] font-bold text-amber-900 uppercase">Principal Strategic Trade-Off (Milestone 2)</div>
+                <p id="diag-tradeoff-desc" class="text-xs text-stone-700"></p>
+              </div>
+            </div>
+
+            <div class="pt-3 border-t border-stone-200 flex items-center justify-between text-xs">
+              <span id="diag-vc-ratio" class="font-bold text-stone-700">Active Drivers: 3 Value (V) / 3 Cost (C)</span>
+              <button onclick="syncStrategyToCharter()" class="bg-stone-900 hover:bg-stone-800 text-white font-bold px-3 py-1.5 rounded-lg transition">Push to Pilot Charter →</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 4: CH. 11 & CH. 12 CURVEBALLS & FEASIBILITY SIMULATOR ==================== -->
+    <section id="tab-governance" class="hidden space-y-6">
+      <!-- Curveball Injector Box -->
+      <div class="bg-white rounded-2xl shadow-sm border border-stone-200 p-5">
+        <div class="flex flex-wrap items-center justify-between gap-4 mb-3">
+          <div>
+            <span class="text-xs font-bold uppercase tracking-wider text-amber-700">Phase 3 Shock • Minute 22:00 Boardroom Curveball Injector</span>
+            <h2 class="text-xl font-extrabold text-stone-900">Test Your Strategy Against a Governance or Operational Shock</h2>
+            <p class="text-xs sm:text-sm text-stone-600">Select one of the three classroom curveballs below to see how it impacts your Financial, Operational, and Strategic Feasibility scores.</p>
+          </div>
+          <button id="btn-gov-to-charter" onclick="switchTab('charter')" class="bg-rose-900 hover:bg-rose-800 text-white text-xs font-bold px-3.5 py-2 rounded-lg transition">Finalize 2027 Pilot Charter →</button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+          <button id="cb-btn-0" onclick="selectCurveball(0)" class="text-left p-3.5 rounded-xl border-2 border-stone-800 bg-stone-100 transition">
+            <div class="text-[10px] font-bold uppercase text-stone-600">Baseline Mode</div>
+            <div class="text-xs font-extrabold text-stone-900 mt-1">No Curveball Active</div>
+            <p class="text-[11px] text-stone-600 mt-1">Evaluate baseline feasibility before Minute 22:00 shock.</p>
+          </button>
+
+          <button id="cb-btn-1" onclick="selectCurveball(1)" class="text-left p-3.5 rounded-xl border-2 border-stone-200 bg-white hover:border-amber-500 transition">
+            <div class="text-[10px] font-bold uppercase text-rose-800">Curveball 1 • Ch. 12 Governance</div>
+            <div class="text-xs font-extrabold text-stone-900 mt-1">$250K Grant Clawback Audit</div>
+            <p class="text-[11px] text-stone-600 mt-1">Requires ≥30% Title I / scholarship seats or county/arts grant is clawed back.</p>
+          </button>
+
+          <button id="cb-btn-2" onclick="selectCurveball(2)" class="text-left p-3.5 rounded-xl border-2 border-stone-200 bg-white hover:border-amber-500 transition">
+            <div class="text-[10px] font-bold uppercase text-amber-800">Curveball 2 • Ch. 8 & 12 Agency</div>
+            <div class="text-xs font-extrabold text-stone-900 mt-1">Contractor 70% Rev & IP Hold-Up</div>
+            <p class="text-[11px] text-stone-600 mt-1">External vendor demands 70% ticket split + ownership of curriculum & student list.</p>
+          </button>
+
+          <button id="cb-btn-3" onclick="selectCurveball(3)" class="text-left p-3.5 rounded-xl border-2 border-stone-200 bg-white hover:border-amber-500 transition">
+            <div class="text-[10px] font-bold uppercase text-teal-800">Curveball 3 • Ch. 11 Org Design</div>
+            <div class="text-xs font-extrabold text-stone-900 mt-1">43-Seat Screen & Staff Turf War</div>
+            <p class="text-[11px] text-stone-600 mt-1">Events staff object that weekend student premieres clash with peak revenue shows.</p>
+          </button>
+        </div>
+
+        <div id="curveball-alert-box" class="mt-3 p-3.5 rounded-xl bg-stone-50 border border-stone-200 text-xs text-stone-700 flex flex-wrap items-center justify-between gap-2">
+          <span id="curveball-alert-text"><strong>Baseline Mode:</strong> Click Curveball 1, 2, or 3 above at Minute 22:00 to test your Board’s governance and organizational controls.</span>
+          <span id="curveball-compliance-pill" class="font-bold px-2.5 py-1 rounded bg-emerald-100 text-emerald-800">Governance Status: Compliant</span>
+        </div>
+      </div>
+
+      <!-- Two-Column Simulator: Pilot Economics & Org Controls (Left) + Live Feasibility Output (Right) -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Left 7 Cols: Interactive Sliders & Ch. 11 Org Controls -->
+        <div class="lg:col-span-7 bg-white rounded-2xl shadow-sm border border-stone-200 p-5 space-y-5">
+          <div>
+            <span class="text-xs font-bold uppercase text-rose-800">Milestone 2 & 3 Operational Credibility Simulator</span>
+            <h3 class="text-base font-extrabold text-stone-900">Configure 2027 Pilot Capacity, Pricing & Ch. 11 Controls</h3>
+            <p class="text-xs text-stone-500">Adjust the sliders to model paying audience, full delivery cost, capacity limits (bounded by the 3,000-sq-ft wing and 43-seat screening room), and cross-subsidies.</p>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <!-- Slider 1: Cohort Size -->
+            <div class="bg-stone-50 p-3 rounded-xl border border-stone-200">
+              <div class="flex justify-between text-xs font-bold text-stone-800 mb-1">
+                <label for="sim-cohort-size">Cohort Capacity Limit (Max 43)</label>
+                <span id="val-cohort-size" class="text-rose-900">24 participants</span>
+              </div>
+              <input id="sim-cohort-size" type="range" min="10" max="43" step="1" value="24" oninput="runFeasibilitySim()" class="w-full accent-rose-800">
+              <div class="text-[11px] text-stone-500 mt-0.5">Fits 3,000-sq-ft classrooms & 43-seat micro-cinema premiere</div>
+            </div>
+
+            <!-- Slider 2: Cohorts / Sessions per Year -->
+            <div class="bg-stone-50 p-3 rounded-xl border border-stone-200">
+              <div class="flex justify-between text-xs font-bold text-stone-800 mb-1">
+                <label for="sim-cohorts-yr">Cohorts / Program Cycles per Year</label>
+                <span id="val-cohorts-yr" class="text-rose-900">16 cohorts/yr</span>
+              </div>
+              <input id="sim-cohorts-yr" type="range" min="4" max="36" step="2" value="16" oninput="runFeasibilitySim()" class="w-full accent-rose-800">
+              <div class="text-[11px] text-stone-500 mt-0.5">>24 cohorts/yr increases scheduling friction with 1,000+ events</div>
+            </div>
+
+            <!-- Slider 3: Tuition / Ticket Fee per Paying Participant -->
+            <div class="bg-stone-50 p-3 rounded-xl border border-stone-200">
+              <div class="flex justify-between text-xs font-bold text-stone-800 mb-1">
+                <label for="sim-price">Tuition / Fee per Paying Seat ($)</label>
+                <span id="val-price" class="text-rose-900">$275</span>
+              </div>
+              <input id="sim-price" type="range" min="50" max="500" step="25" value="275" oninput="runFeasibilitySim()" class="w-full accent-rose-800">
+              <div class="text-[11px] text-stone-500 mt-0.5">Benchmarked vs. local youth film camps & adult seminars</div>
+            </div>
+
+            <!-- Slider 4: Title I / Scholarship Seat Share (%) -->
+            <div class="bg-stone-50 p-3 rounded-xl border border-stone-200">
+              <div class="flex justify-between text-xs font-bold text-stone-800 mb-1">
+                <label for="sim-scholarship">Title I / Scholarship Seats (%)</label>
+                <span id="val-scholarship" class="text-amber-800">30%</span>
+              </div>
+              <input id="sim-scholarship" type="range" min="0" max="50" step="5" value="30" oninput="runFeasibilitySim()" class="w-full accent-amber-700">
+              <div class="text-[11px] text-stone-500 mt-0.5">Curveball 1 requires ≥30% community access seats</div>
+            </div>
+
+            <!-- Slider 5: Delivery Cost per Cohort -->
+            <div class="bg-stone-50 p-3 rounded-xl border border-stone-200">
+              <div class="flex justify-between text-xs font-bold text-stone-800 mb-1">
+                <label for="sim-cost-cohort">Full Delivery Cost per Cohort ($)</label>
+                <span id="val-cost-cohort" class="text-stone-800">$3,200</span>
+              </div>
+              <input id="sim-cost-cohort" type="range" min="1500" max="7500" step="100" value="3200" oninput="runFeasibilitySim()" class="w-full accent-stone-700">
+              <div class="text-[11px] text-stone-500 mt-0.5">Includes instructor stipends, gear maintenance, & facility ops</div>
+            </div>
+
+            <!-- Slider 6: Daytime Corporate Rental / Sponsor Cross-Subsidy -->
+            <div class="bg-stone-50 p-3 rounded-xl border border-stone-200">
+              <div class="flex justify-between text-xs font-bold text-stone-800 mb-1">
+                <label for="sim-sponsor">Daytime Rental / Sponsor Offset ($/yr)</label>
+                <span id="val-sponsor" class="text-emerald-800">$25,000</span>
+              </div>
+              <input id="sim-sponsor" type="range" min="0" max="60000" step="5000" value="25000" oninput="runFeasibilitySim()" class="w-full accent-emerald-700">
+              <div class="text-[11px] text-stone-500 mt-0.5">Weekday corporate seminars or corporate partner underwriting</div>
+            </div>
+          </div>
+
+          <!-- Ch. 11 Organizational Structure & Control Selectors -->
+          <div class="pt-2 border-t border-stone-200 grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label for="sim-org-structure" class="block text-xs font-bold text-stone-800 mb-1">Ch. 11 Org Structure</label>
+              <select id="sim-org-structure" onchange="runFeasibilitySim()" class="w-full text-xs border border-stone-300 rounded-lg p-2 bg-white">
+                <option value="Functional Structure + Cross-Functional Team" selected>Functional + Cross-Functional Team (Best Fit)</option>
+                <option value="Cooperative M-Form (Centralized SBU)">Cooperative M-Form (Higher Admin Cost)</option>
+                <option value="Matrix Dual-Reporting Structure">Matrix Structure (Gridlock Risk)</option>
+                <option value="Competitive M-Form (Siloed SBU)">Competitive M-Form (Turf War Risk)</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="sim-input-control" class="block text-xs font-bold text-stone-800 mb-1">Ch. 11 Input Control Rule</label>
+              <select id="sim-input-control" onchange="runFeasibilitySim()" class="w-full text-xs border border-stone-300 rounded-lg p-2 bg-white">
+                <option value="Off-peak Saturday AM premieres + reusable syllabus & equipment SOP" selected>Off-Peak Screen Rule + Reusable Gear SOP</option>
+                <option value="Pre-approved partner contract cap & Title I seat quota">Partner Fee Cap + 30% Title I Quota</option>
+                <option value="Minimum 15 paid enrollees (MES gate) 14 days prior to launch">15-Student MES Enrollment Gate</option>
+                <option value="Informal ad-hoc scheduling as requests arrive">Ad-Hoc Scheduling (Weak Control)</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="sim-output-control" class="block text-xs font-bold text-stone-800 mb-1">Ch. 11 Output Control KPI</label>
+              <select id="sim-output-control" onchange="runFeasibilitySim()" class="w-full text-xs border border-stone-300 rounded-lg p-2 bg-white">
+                <option value="≥75% seat utilization, positive net contribution, & ≥30% Title I access" selected>≥75% Fill Rate + Positive Net $ + 30% Access</option>
+                <option value="Gross ticket volume growth only (ignores net margin)">Gross Attendance Only (Margin Risk)</option>
+                <option value="Corporate rental revenue maximization only (ignores youth mission)">Corporate Revenue Only (Mission Drift Risk)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right 5 Cols: Financial Readout & Milestone 3 Feasibility Chart -->
+        <div class="lg:col-span-5 bg-white rounded-2xl shadow-sm border border-stone-200 p-5 flex flex-col justify-between space-y-4">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="text-sm font-extrabold text-stone-900">2027 Education Wing Pro Forma & Feasibility</h3>
+              <span id="sim-overall-verdict" class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800">Feasible (13.8 / 15)</span>
+            </div>
+
+            <!-- 4 Financial & Operational Metric Boxes -->
+            <div class="grid grid-cols-2 gap-3 mb-4">
+              <div class="bg-stone-50 p-3 rounded-xl border border-stone-200">
+                <div class="text-[11px] font-semibold text-stone-500 uppercase">Annual Participants</div>
+                <div id="out-total-students" class="text-lg font-extrabold text-stone-900">384 / yr</div>
+                <div id="out-paid-vs-free" class="text-[11px] text-stone-600">269 paid • 115 Title I</div>
+              </div>
+              <div class="bg-stone-50 p-3 rounded-xl border border-stone-200">
+                <div class="text-[11px] font-semibold text-stone-500 uppercase">Gross Wing Revenue</div>
+                <div id="out-gross-rev" class="text-lg font-extrabold text-rose-900">$98,975</div>
+                <div id="out-cost-total" class="text-[11px] text-stone-600">Delivery Cost: $51,200</div>
+              </div>
+              <div class="bg-stone-50 p-3 rounded-xl border border-stone-200">
+                <div class="text-[11px] font-semibold text-stone-500 uppercase">Net Earned Contribution</div>
+                <div id="out-net-contrib" class="text-lg font-extrabold text-emerald-700">+$47,775</div>
+                <div id="out-breakeven" class="text-[11px] text-stone-600">Break-even: 12 paid/cohort</div>
+              </div>
+              <div class="bg-stone-50 p-3 rounded-xl border border-stone-200">
+                <div class="text-[11px] font-semibold text-stone-500 uppercase">Earned Revenue Ratio</div>
+                <div id="out-earned-share" class="text-lg font-extrabold text-amber-800">74.7%</div>
+                <div class="text-[11px] text-stone-600">Board Floor: ≥70.0%</div>
+              </div>
+            </div>
+
+            <!-- Chart.js Bar Chart for Milestone 3 Feasibility Lenses -->
+            <div class="relative h-56">
+              <canvas id="chart-feasibility-scores"></canvas>
+            </div>
+          </div>
+
+          <div class="pt-3 border-t border-stone-200 flex items-center justify-between">
+            <span class="text-xs text-stone-500">Scores sync directly with Tab 5 Charter</span>
+            <button onclick="syncSimToCharter()" class="bg-rose-900 hover:bg-rose-800 text-white text-xs font-bold px-3.5 py-2 rounded-lg transition">Apply to 2027 Pilot Charter →</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 5: BINDING 2027 PILOT CHARTER BALLOT & RUBRIC ==================== -->
+    <section id="tab-charter" class="hidden space-y-6">
+      <!-- Top Action Bar -->
+      <div class="bg-white rounded-2xl shadow-sm border border-stone-200 p-5 flex flex-wrap items-center justify-between gap-4 no-print">
+        <div>
+          <span class="text-xs font-bold uppercase tracking-wider text-rose-800">Phase 4 & 5 Deliverable • Binding Board Resolution</span>
+          <h2 class="text-xl font-extrabold text-stone-900">2027 Tampa Theatre Education Wing Pilot Charter & Roll-Call Ballot</h2>
+          <p class="text-xs sm:text-sm text-stone-600">Review or edit the 8 operational credibility fields below, record each Committee Chair’s roll-call vote, and copy or print your signed Board Charter.</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <button id="btn-autofill-charter" onclick="syncAllToCharter()" class="bg-stone-100 hover:bg-stone-200 text-stone-800 text-xs font-bold px-3 py-2 rounded-lg transition">Sync from Lab & Simulator</button>
+          <button id="btn-copy-charter" onclick="copyCharterToClipboard()" class="bg-amber-500 hover:bg-amber-400 text-stone-950 text-xs font-bold px-3.5 py-2 rounded-lg transition">Copy Charter Summary</button>
+          <button id="btn-print-charter" onclick="window.print()" class="bg-rose-900 hover:bg-rose-800 text-white text-xs font-bold px-3.5 py-2 rounded-lg transition">Print / Save PDF</button>
+        </div>
+      </div>
+
+      <!-- Printable Charter Card -->
+      <div class="bg-white rounded-2xl shadow-sm border border-stone-200 p-6 print-only-card space-y-5">
+        <div class="border-b-2 border-rose-900 pb-3 flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <div class="text-xs font-bold uppercase text-amber-700">MGT 431 Board of Directors Resolution • Fall 2026</div>
+            <h3 class="text-lg font-extrabold text-rose-900">Tampa Theatre 2027 Education Wing — Binding Pilot Charter</h3>
+          </div>
+          <div class="flex items-center gap-2 text-xs">
+            <label for="charter-table-num" class="font-bold text-stone-700">Board Table #:</label>
+            <input id="charter-table-num" type="text" value="Table 1" oninput="saveCharterState()" class="border border-stone-300 rounded px-2 py-1 w-24 font-bold text-rose-900">
+          </div>
+        </div>
+
+        <!-- 8-Point Operational Credibility Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label for="charter-field-1" class="block text-xs font-bold text-rose-900 uppercase mb-1">1. Winning Strategic Option & Competitive Scope (Ch. 6)</label>
+            <textarea id="charter-field-1" rows="2" oninput="saveCharterState()" class="w-full text-xs border border-stone-300 rounded-lg p-2.5 bg-stone-50"></textarea>
+          </div>
+          <div>
+            <label for="charter-field-2" class="block text-xs font-bold text-rose-900 uppercase mb-1">2. Paying Audience, Pricing & Cross-Subsidy (Milestone 2 Mandate)</label>
+            <textarea id="charter-field-2" rows="2" oninput="saveCharterState()" class="w-full text-xs border border-stone-300 rounded-lg p-2.5 bg-stone-50"></textarea>
+          </div>
+          <div>
+            <label for="charter-field-3" class="block text-xs font-bold text-rose-900 uppercase mb-1">3. Value Innovation: Value Drivers (V) & Cost Drivers (C) (Ch. 6)</label>
+            <textarea id="charter-field-3" rows="2" oninput="saveCharterState()" class="w-full text-xs border border-stone-300 rounded-lg p-2.5 bg-stone-50"></textarea>
+          </div>
+          <div>
+            <label for="charter-field-4" class="block text-xs font-bold text-rose-900 uppercase mb-1">4. Build–Partner–Buy Mode & Partner Terms (Ch. 8)</label>
+            <textarea id="charter-field-4" rows="2" oninput="saveCharterState()" class="w-full text-xs border border-stone-300 rounded-lg p-2.5 bg-stone-50"></textarea>
+          </div>
+          <div>
+            <label for="charter-field-5" class="block text-xs font-bold text-rose-900 uppercase mb-1">5. Capacity Limit, Full Delivery Cost & Schedule Window (Milestone 2)</label>
+            <textarea id="charter-field-5" rows="2" oninput="saveCharterState()" class="w-full text-xs border border-stone-300 rounded-lg p-2.5 bg-stone-50"></textarea>
+          </div>
+          <div>
+            <label for="charter-field-6" class="block text-xs font-bold text-rose-900 uppercase mb-1">6. Accountable Owner & Organizational Structure (Ch. 11)</label>
+            <textarea id="charter-field-6" rows="2" oninput="saveCharterState()" class="w-full text-xs border border-stone-300 rounded-lg p-2.5 bg-stone-50"></textarea>
+          </div>
+          <div>
+            <label for="charter-field-7" class="block text-xs font-bold text-rose-900 uppercase mb-1">7. Strategic Control System: Input Rules & Output KPIs (Ch. 11)</label>
+            <textarea id="charter-field-7" rows="2" oninput="saveCharterState()" class="w-full text-xs border border-stone-300 rounded-lg p-2.5 bg-stone-50"></textarea>
+          </div>
+          <div>
+            <label for="charter-field-8" class="block text-xs font-bold text-rose-900 uppercase mb-1">8. 12-Month Pilot Continuation Gate & Curveball Safeguard (Ch. 12)</label>
+            <textarea id="charter-field-8" rows="2" oninput="saveCharterState()" class="w-full text-xs border border-stone-300 rounded-lg p-2.5 bg-stone-50"></textarea>
+          </div>
+        </div>
+
+        <!-- Board Roll-Call Sign-Off Bar -->
+        <div class="bg-stone-50 rounded-xl border border-stone-200 p-4">
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+            <div class="text-xs font-extrabold uppercase text-stone-800">Official Board Roll-Call Vote (Click Any Seat to Toggle Approve / Dissent)</div>
+            <span id="charter-vote-tally-badge" class="text-xs font-bold px-3 py-1 rounded-full bg-emerald-100 text-emerald-800">Resolution Adopted: 4 For / 0 Against</span>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <button id="charter-seat-0" onclick="toggleSeatVote(0)" class="p-2.5 rounded-lg border border-emerald-300 bg-emerald-50 text-left text-xs transition">
+              <div class="font-bold text-stone-900">Role 1: Finance Chair</div>
+              <div id="charter-seat-name-0" class="text-[11px] text-stone-600">Director 1 • APPROVE</div>
+            </button>
+            <button id="charter-seat-1" onclick="toggleSeatVote(1)" class="p-2.5 rounded-lg border border-emerald-300 bg-emerald-50 text-left text-xs transition">
+              <div class="font-bold text-stone-900">Role 2: Mission Chair</div>
+              <div id="charter-seat-name-1" class="text-[11px] text-stone-600">Director 2 • APPROVE</div>
+            </button>
+            <button id="charter-seat-2" onclick="toggleSeatVote(2)" class="p-2.5 rounded-lg border border-emerald-300 bg-emerald-50 text-left text-xs transition">
+              <div class="font-bold text-stone-900">Role 3: Partnerships Chair</div>
+              <div id="charter-seat-name-2" class="text-[11px] text-stone-600">Director 3 • APPROVE</div>
+            </button>
+            <button id="charter-seat-3" onclick="toggleSeatVote(3)" class="p-2.5 rounded-lg border border-emerald-300 bg-emerald-50 text-left text-xs transition">
+              <div class="font-bold text-stone-900">Role 4: Operations Chair</div>
+              <div id="charter-seat-name-3" class="text-[11px] text-stone-600">Director 4 • APPROVE</div>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Instructor Evaluation Rubric & Plenary Debrief Calculator -->
+      <div class="bg-white rounded-2xl shadow-sm border border-stone-200 p-5 space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <span class="text-xs font-bold uppercase text-rose-800">Phase 5 Plenary Debrief & Instructor Grading Calculator</span>
+            <h3 class="text-base font-extrabold text-stone-900">UT Spartan Ready Pillars & Milestone 3 Assessment Rubric</h3>
+          </div>
+          <div class="bg-rose-900 text-white px-3.5 py-1.5 rounded-xl text-xs font-bold">
+            Table Rubric Score: <span id="rubric-total-display" class="text-amber-300 text-sm font-extrabold">94 / 100</span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div class="p-3.5 rounded-xl bg-stone-50 border border-stone-200 space-y-2">
+            <div class="flex justify-between text-xs font-bold text-stone-900">
+              <label for="rubric-slider-0">1. Ch. 6 & 8 Strategy Logic</label>
+              <span id="rubric-val-0" class="text-rose-900">24 / 25</span>
+            </div>
+            <input id="rubric-slider-0" type="range" min="15" max="25" value="24" oninput="updateRubricScore()" class="w-full accent-rose-800">
+            <p class="text-[11px] text-stone-600"><em>Critical Thinking:</em> Sharp scope, paired V/C drivers, & core-competence Make/Partner/Buy logic.</p>
+          </div>
+
+          <div class="p-3.5 rounded-xl bg-stone-50 border border-stone-200 space-y-2">
+            <div class="flex justify-between text-xs font-bold text-stone-900">
+              <label for="rubric-slider-1">2. Operational Credibility</label>
+              <span id="rubric-val-1" class="text-rose-900">23 / 25</span>
+            </div>
+            <input id="rubric-slider-1" type="range" min="15" max="25" value="23" oninput="updateRubricScore()" class="w-full accent-rose-800">
+            <p class="text-[11px] text-stone-600"><em>Organization:</em> Explicit paying audience, full delivery cost, 43-seat/3,000-sq-ft capacity cap, & owner.</p>
+          </div>
+
+          <div class="p-3.5 rounded-xl bg-stone-50 border border-stone-200 space-y-2">
+            <div class="flex justify-between text-xs font-bold text-stone-900">
+              <label for="rubric-slider-2">3. Ch. 11 & 12 Controls</label>
+              <span id="rubric-val-2" class="text-rose-900">24 / 25</span>
+            </div>
+            <input id="rubric-slider-2" type="range" min="15" max="25" value="24" oninput="updateRubricScore()" class="w-full accent-rose-800">
+            <p class="text-[11px] text-stone-600"><em>Self-Awareness & Ethics:</em> Input/Output KPIs, Curveball resolution, & 12-mo stop/go gate.</p>
+          </div>
+
+          <div class="p-3.5 rounded-xl bg-stone-50 border border-stone-200 space-y-2">
+            <div class="flex justify-between text-xs font-bold text-stone-900">
+              <label for="rubric-slider-3">4. Role Debate & Teamwork</label>
+              <span id="rubric-val-3" class="text-rose-900">23 / 25</span>
+            </div>
+            <input id="rubric-slider-3" type="range" min="15" max="25" value="23" oninput="updateRubricScore()" class="w-full accent-rose-800">
+            <p class="text-[11px] text-stone-600"><em>Communication & Teamwork:</em> Multi-perspective debate & cohesive 60-second plenary readout.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    // ==================== GROUNDED STATE & CASE DATA ====================
+    var PHASES = [
+      {
+        title: "Phase 1: Role Briefing (00–08m)",
+        badge: "Phase 1 Active (8 Min)",
+        durationSec: 8 * 60,
+        prompt: "Assign Roles 1–4 at your Board table, review the baseline case metrics, and prepare a 60-second opening statement from your committee lens."
+      },
+      {
+        title: "Phase 2: Ch. 6 & 8 Scope Debate (08–22m)",
+        badge: "Phase 2 Active (14 Min)",
+        durationSec: 14 * 60,
+        prompt: "Deliver 1-minute role openings. Debate Option A (Youth Film Program), Option B (Community Arts Program), Option C (Heritage and Corporate Program), or a Hybrid across Value/Cost drivers and Build-Partner-Buy."
+      },
+      {
+        title: "Phase 3: Ch. 11 & 12 Curveball & Controls (22–34m)",
+        badge: "Phase 3 Active (12 Min)",
+        durationSec: 12 * 60,
+        prompt: "MINUTE 22:00 CURVEBALL! Inject a Governance/Operational Shock in Tab 4, define your Organizational Structure, Input/Output KPIs, and verify pro forma feasibility."
+      },
+      {
+        title: "Phase 4: Milestone 3 Scoring & Charter (34–42m)",
+        badge: "Phase 4 Active (8 Min)",
+        durationSec: 8 * 60,
+        prompt: "Complete all 8 operational credibility specifications on the 2027 Pilot Charter in Tab 5 and conduct your table's binding roll-call vote."
+      },
+      {
+        title: "Phase 5: Plenary Roll-Call & Debrief (42–50m)",
+        badge: "Phase 5 Active (8 Min)",
+        durationSec: 8 * 60,
+        prompt: "Each Board table delivers a 60-second lightning readout: Winning Option, Build-Partner-Buy mode, Curveball fix, and 12-Month Stop/Go Gate."
+      }
+    ];
+
+    var ROLES_DATA = [
+      {
+        chapter: "ROLE 1 • CH. 6 COST DRIVERS & CH. 12 FINANCIAL FEASIBILITY",
+        title: "Chair, Finance & Earned Revenue Committee",
+        mandate: "Protect Tampa Theatre’s hard-won financial self-sufficiency. In 2025, 70% of the Theatre’s $4.5M revenue ($3.15M) came from earned income (tickets, concessions, venue rentals). You refuse to let the 3,000-sq-ft wing become a permanent cash drain ('Dog' or unviable 'Question Mark' on the BCG Matrix).",
+        questions: [
+          "Who is the exact paying audience, and what is the tuition/ticket price per seat or cohort?",
+          "What is the full delivery cost per cohort and the minimum break-even enrollment (Minimum Efficient Scale)?",
+          "How do we use repeatable formats and shared equipment to keep unit costs low?"
+        ],
+        condition: "You favor high-margin, repeatable formats (Option A paid youth bootcamps or Option C/Hybrid daytime corporate sessions). You will only vote YES if the Pilot Charter specifies a unit cost-containment rule and a 12-month financial stop-loss gate.",
+        sampleNote: "As Finance Chair, I remind the Board that 70% ($3.15M) of our $4.5M budget comes from earned revenue. We cannot approve an open-ended community program that drains cash. I propose a hybrid model where paid youth creator cohorts ($275/seat) and $25K in daytime corporate/sponsor underwriting generate a +$47K net contribution and keep our earned share above 74%."
+      },
+      {
+        chapter: "ROLE 2 • CH. 12 SHARED VALUE, ETHICS & MISSION GOVERNANCE",
+        title: "Chair, Community Impact & Donor Stewardship",
+        mandate: "Uphold Tampa Theatre’s 1973 civic rescue covenant and nonprofit mission: 'building community through extraordinary entertainment in an iconic landmark.' You represent public funders (City of Tampa, Hillsborough County, Arts Council) and corporate/individual donors (Bank of America, Publix, UT, TECO).",
+        questions: [
+          "How does this program create Shared Value (Porter & Kramer, 2011) for underserved Hillsborough County youth (20.9% of county population is under 18)?",
+          "If we charge $275+ per student or focus on corporate rentals, how do we prevent mission drift and elitism?",
+          "What binding scholarship or Title I school quota protects our $250K+ public grant eligibility?"
+        ],
+        condition: "You worry Option C turns a tax-exempt civic landmark into a commercial conference annex. You will only vote YES if at least 30% of education wing seats are reserved for Title I / scholarship students funded via cross-subsidies or corporate sponsors.",
+        sampleNote: "As Community Impact Chair, our lifeblood comes from members, the City of Tampa, Hillsborough County, and corporate partners like Publix and Bank of America. With 20.9% of Hillsborough residents under 18, we must mandate a 30% Title I scholarship quota cross-subsidized by daytime corporate workshops—creating true Shared Value."
+      },
+      {
+        chapter: "ROLE 3 • CH. 8 RELATED DIVERSIFICATION & BUILD-PARTNER-BUY",
+        title: "Chair, Strategic Partnerships & Corporate Scope",
+        mandate: "Ensure the education wing leverages Tampa Theatre’s true core competencies (historic film exhibition, Summer Film Camp storytelling, live event curation) through Related-Constrained Diversification—avoiding the coordination costs and 'diversification discount' of unrelated ventures (like GE’s conglomerate overreach).",
+        questions: [
+          "Where should curriculum development and teaching sit on the Build–Partner–Buy continuum?",
+          "Why build a full-time teaching faculty in-house when we can form a Strategic Alliance with UT, USF, and local filmmakers?",
+          "How do we protect Tampa Theatre’s curriculum IP and student relationships from third-party contractor hold-up?"
+        ],
+        condition: "You favor Option A ('Youth Film Program') or an Option A+C Hybrid because 65% of Gen Z identify as video content creators, and premiering student films in our 43-seat or 1,200-seat theater creates an inimitable Economy of Scope. You demand a Strategic Alliance where TT retains brand and IP ownership.",
+        sampleNote: "As Partnerships Chair, 65% of Gen Z are video creators. Extending our Summer Film Camp into a year-round Youth Creator Academy is textbook Related-Constrained Diversification. Rather than hiring costly full-time faculty (Make) or surrendering IP to a vendor (Buy), let's form a Strategic Alliance with UT and USF film programs."
+      },
+      {
+        chapter: "ROLE 4 • CH. 11 ORG STRUCTURE, CULTURE & STRATEGIC CONTROLS",
+        title: "Chair, Operations, Preservation & Org Design",
+        mandate: "Translate strategy into daily execution without breaking Tampa Theatre’s lean nonprofit staff or 1926 Historic Register landmark. The team already runs 1,000+ events a year across the 1,200-seat main auditorium and 43-seat second screen. Unclear reporting lines (like Alphabet’s matrix gridlock) will cause burnout and turf wars.",
+        questions: [
+          "Who is the single accountable owner for the 3,000-sq-ft education wing?",
+          "How do we coordinate marketing, box office, and facility scheduling using a Functional Structure + Cross-Functional Team without creating M-form silos?",
+          "What Input Controls and Output KPIs will prevent weekend student premieres from clashing with peak revenue screenings?"
+        ],
+        condition: "You oppose ad-hoc scheduling or complex matrix reporting. You will only vote YES if the Charter names a single accountable Education Program Manager, sets an Input Control (off-peak Saturday AM screening windows + reusable gear SOP), and tracks quarterly Output KPIs.",
+        sampleNote: "As Operations Chair, our lean staff already executes 1,000+ events a year. To avoid Alphabet-style matrix gridlock or internal turf wars over the 43-seat theater, we need a Functional Structure with a dedicated Education Program Manager, an Input Control restricting student premieres to off-peak Saturday mornings, and an Output KPI of 75% seat fill."
+      }
+    ];
+
+    var OPTIONS_DATA = {
+      A: {
+        name: "Option A: “Youth Film Program” (Youth Film & Creator Academy)",
+        scope: "Narrow Youth Competitive Scope (Ages 12–22). Competes with USF Media Labs, Patel Conservatory, and Carrollwood Cultural Center by pairing hands-on digital filmmaking with red-carpet premieres.",
+        divType: "Related-Constrained Diversification (Ch. 8)",
+        divDesc: "Directly leverages Tampa Theatre’s established Summer Film Camp competence, 43-seat and 1,200-seat screening rooms, and local film community ties (Economies of Scope).",
+        tradeoff: "Leaves weekday daytime hours (when youth are in school) underutilized unless paired with school field trips or daytime rentals; requires technical camera/editing equipment upkeep.",
+        presets: { cohort: 24, cohortsYr: 16, price: 275, scholarship: 25, cost: 3200, sponsor: 15000 }
+      },
+      B: {
+        name: "Option B: “Community Arts Program” (Year-Round Community Arts Hub)",
+        scope: "Broad Community Competitive Scope (K–12 schools, families, educators, seniors). Competes across arts education against Patel, Jobsite, Glazer Children's Museum, Hoffman School, and Tampa Museum of Art.",
+        divType: "Related-Linked Diversification (Ch. 8)",
+        divDesc: "Broadens beyond film into general multi-disciplinary arts and cultural enrichment; shares community brand goodwill but requires new teaching capabilities across varied age groups.",
+        tradeoff: "High risk of getting 'Stuck in the Middle' (Ch. 6) against larger conservatories and museums; heavy reliance on grants and low-fee workshops threatens the 70% earned revenue ratio.",
+        presets: { cohort: 30, cohortsYr: 22, price: 125, scholarship: 40, cost: 3500, sponsor: 15000 }
+      },
+      C: {
+        name: "Option C: “Heritage and Corporate Program” (Cultural Heritage & VIP Corporate Studio)",
+        scope: "Adult, Tourist & Corporate Competitive Scope. Competes with Straz Center, Ruth Eckerd Hall, Capitol Theatre, Mahaffey Theater, and CinéBistro for premium seminars, organ/architecture tours, and corporate training rentals.",
+        divType: "Dominant Business / Hospitality Extension (Ch. 8)",
+        divDesc: "Monetizes existing landmark hospitality, backstage tour, and event rental capabilities during idle weekday daytime hours with minimal curriculum R&D.",
+        tradeoff: "Generates high earned revenue margins, but risks severe mission drift and public/donor backlash (Curveball 1) if the education wing is perceived as an exclusive corporate rental annex.",
+        presets: { cohort: 28, cohortsYr: 14, price: 400, scholarship: 10, cost: 3600, sponsor: 35000 }
+      },
+      H: {
+        name: "Option D: Board Hybrid (Youth Film Academy + Daytime Corporate/School Cross-Subsidy)",
+        scope: "Segmented Dual Scope (Ch. 6 Value Innovation). Dedicates after-school, weekend, and summer blocks to the Youth Creator Academy while monetizing weekday daytime hours via corporate media/leadership rentals and Title I school field trips.",
+        divType: "Related-Constrained Diversification + Internal Capital Cross-Subsidy (Ch. 8)",
+        divDesc: "Combines Economies of Scope (shared 3,000-sq-ft classrooms, AV gear, and 43-seat screening room) with Shared Value governance: daytime corporate revenue underwrites a 30% Title I youth scholarship quota.",
+        tradeoff: "Requires disciplined Ch. 11 Input Controls (strict daytime vs. afternoon/Saturday AM scheduling windows) so corporate rentals, youth labs, and the 1,000+ main-stage events never collide.",
+        presets: { cohort: 24, cohortsYr: 16, price: 275, scholarship: 30, cost: 3200, sponsor: 25000 }
+      }
+    };
+
+    var CURVEBALLS_DATA = [
+      {
+        title: "None Injected Yet",
+        desc: "Baseline Mode: Click Curveball 1, 2, or 3 above at Minute 22:00 to test your Board’s governance and organizational controls."
+      },
+      {
+        title: "Curveball 1: $250K Grant Clawback Audit (Ch. 12)",
+        desc: "SHOCK: Hillsborough County & the Arts Council notify the Board that $250,000 in grant funds requires at least 30% of education wing seats to serve Title I youth at zero/subsidized tuition. Fix: Set Title I Scholarship Slider >= 30% and use Daytime Rental/Sponsor Offset to protect the 70% earned revenue ratio."
+      },
+      {
+        title: "Curveball 2: Contractor 70% Rev-Share & IP Hold-Up (Ch. 8 & 12)",
+        desc: "SHOCK: A private media contractor offers to run classes for 70% of ticket revenue while keeping proprietary rights to the curriculum and student email list. Fix: Reject 'Arm's-Length Market Outsourcing (Buy)' in Tab 3 and select 'Strategic Alliance (UT/USF)' or 'Long-Term Contracts' with IP retention."
+      },
+      {
+        title: "Curveball 3: 43-Seat Screen & Staff Turf War (Ch. 11)",
+        desc: "SHOCK: Film & Live Events staff object that weekend education wing premieres tie up the 43-seat theater and box office during peak evening shows. Fix: Keep Cohorts <= 20/yr, select 'Functional + Cross-Functional Team', and enforce the 'Off-Peak Screen Rule + Reusable Gear SOP' Input Control."
+      }
+    ];
+
+    var state = {
+      activeTab: 'command',
+      currentPhase: 0,
+      remainingSec: 50 * 60,
+      timerRunning: false,
+      timerId: null,
+      muted: false,
+      selectedRoleIdx: 0,
+      roleMembers: ["Director 1", "Director 2", "Director 3", "Director 4"],
+      roleNotes: ["", "", "", ""],
+      roleVotes: [true, true, true, true],
+      selectedOption: 'A',
+      activeCurveball: 0,
+      simScores: { fin: 4.5, ops: 4.4, strat: 4.6 }
+    };
+
+    var industryChart = null;
+    var revenueChart = null;
+    var feasibilityChart = null;
+
+    // ==================== AUDIO CHIME (WEB AUDIO API) ====================
+    function playChime() {
+      if (state.muted) return;
+      try {
+        var AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        var ctx = new AudioCtx();
+        var osc = ctx.createOscillator();
+        var gain = ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+        osc.frequency.setValueAtTime(880.0, ctx.currentTime + 0.14); // A5
+        gain.gain.setValueAtTime(0.18, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.65);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.65);
+      } catch (e) {}
+    }
+
+    function toggleMute() {
+      state.muted = !state.muted;
+      var btn = document.getElementById('btn-audio-mute');
+      if (btn) {
+        btn.textContent = state.muted ? 'Chime: OFF' : 'Chime: ON';
+      }
+      showToast(state.muted ? 'Phase transition chime muted.' : 'Phase transition chime enabled.');
+    }
+
+    // ==================== TOAST HELPER ====================
+    var toastTimeout = null;
+    function showToast(msg) {
+      var banner = document.getElementById('toast-banner');
+      var text = document.getElementById('toast-message');
+      if (!banner || !text) return;
+      text.textContent = msg;
+      banner.classList.remove('hidden');
+      if (toastTimeout) clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(function() {
+        banner.classList.add('hidden');
+      }, 3200);
+    }
+
+    // ==================== 50-MINUTE CLASSROOM TIMER ====================
+    function formatMMSS(sec) {
+      var m = Math.floor(sec / 60);
+      var s = sec % 60;
+      return (m < 10 ? '0' + m : '' + m) + ':' + (s < 10 ? '0' + s : '' + s);
+    }
+
+    function updateTimerUI() {
+      var disp = document.getElementById('timer-display');
+      var sub = document.getElementById('timer-substatus');
+      var toggleBtn = document.getElementById('btn-timer-toggle');
+      var phaseObj = PHASES[state.currentPhase];
+      if (disp) disp.textContent = formatMMSS(state.remainingSec);
+      if (sub) sub.textContent = state.timerRunning ? 'Running' : 'Paused';
+      if (toggleBtn) toggleBtn.textContent = state.timerRunning ? 'Pause' : 'Start';
+
+      var phaseLabel = document.getElementById('timer-phase-label');
+      var badge = document.getElementById('active-phase-badge');
+      var prompt = document.getElementById('active-phase-prompt');
+      if (phaseLabel) phaseLabel.textContent = phaseObj.title;
+      if (badge) badge.textContent = phaseObj.badge;
+      if (prompt) prompt.textContent = phaseObj.prompt;
+
+      for (var i = 0; i < 5; i++) {
+        var pill = document.getElementById('phase-pill-' + i);
+        if (!pill) continue;
+        if (i === state.currentPhase) {
+          pill.className = "px-2.5 py-1 rounded-md font-bold bg-amber-500 text-stone-950 whitespace-nowrap transition";
+        } else {
+          pill.className = "px-2.5 py-1 rounded-md font-medium text-amber-100 hover:bg-white/10 whitespace-nowrap transition";
+        }
+      }
+    }
+
+    function toggleTimer() {
+      if (state.timerRunning) {
+        clearInterval(state.timerId);
+        state.timerId = null;
+        state.timerRunning = false;
+      } else {
+        playChime();
+        state.timerRunning = true;
+        state.timerId = setInterval(function() {
+          if (state.remainingSec > 0) {
+            state.remainingSec--;
+            // Auto-update phase based on elapsed minutes out of 50:00
+            var elapsedMin = (3000 - state.remainingSec) / 60;
+            var newPhase = 0;
+            if (elapsedMin >= 42) newPhase = 4;
+            else if (elapsedMin >= 34) newPhase = 3;
+            else if (elapsedMin >= 22) newPhase = 2;
+            else if (elapsedMin >= 8) newPhase = 1;
+            if (newPhase !== state.currentPhase) {
+              state.currentPhase = newPhase;
+              playChime();
+              showToast('Entered ' + PHASES[newPhase].title);
+            }
+            updateTimerUI();
+          } else {
+            clearInterval(state.timerId);
+            state.timerId = null;
+            state.timerRunning = false;
+            playChime();
+            updateTimerUI();
+            showToast('50-Minute Board Simulation Complete!');
+          }
+        }, 1000);
+      }
+      updateTimerUI();
+    }
+
+    function resetTimer() {
+      if (state.timerId) clearInterval(state.timerId);
+      state.timerId = null;
+      state.timerRunning = false;
+      state.currentPhase = 0;
+      state.remainingSec = 50 * 60;
+      updateTimerUI();
+      showToast('Timer reset to 50:00 (Phase 1).');
+    }
+
+    function jumpToPhase(phaseIdx) {
+      if (phaseIdx < 0 || phaseIdx > 4) return;
+      state.currentPhase = phaseIdx;
+      var phaseStartElapsedMin = [0, 8, 22, 34, 42][phaseIdx];
+      state.remainingSec = (50 - phaseStartElapsedMin) * 60;
+      playChime();
+      updateTimerUI();
+    }
+
+    function stepPhase(delta) {
+      var next = state.currentPhase + delta;
+      if (next < 0) next = 0;
+      if (next > 4) next = 4;
+      jumpToPhase(next);
+    }
+
+    function jumpToPhaseAndTab(phaseIdx, tabName) {
+      jumpToPhase(phaseIdx);
+      switchTab(tabName);
+    }
+
+    // ==================== TAB NAVIGATION ====================
+    function switchTab(tabName) {
+      state.activeTab = tabName;
+      var tabs = ['command', 'roles', 'strategy', 'governance', 'charter'];
+      for (var i = 0; i < tabs.length; i++) {
+        var t = tabs[i];
+        var sec = document.getElementById('tab-' + t);
+        var btn = document.getElementById('nav-tab-' + t);
+        if (sec) {
+          if (t === tabName) sec.classList.remove('hidden');
+          else sec.classList.add('hidden');
+        }
+        if (btn) {
+          if (t === tabName) {
+            btn.className = "px-3.5 py-2 rounded-lg text-xs sm:text-sm font-bold bg-rose-900 text-amber-200 whitespace-nowrap transition";
+          } else {
+            btn.className = "px-3.5 py-2 rounded-lg text-xs sm:text-sm font-medium text-stone-300 hover:text-white hover:bg-white/10 whitespace-nowrap transition";
+          }
+        }
+      }
+      if (tabName === 'governance' && feasibilityChart) {
+        feasibilityChart.resize();
+      }
+      if (tabName === 'command' && industryChart && revenueChart) {
+        industryChart.resize();
+        revenueChart.resize();
+      }
+    }
+
+    // ==================== TAB 2: ROLE CARDS LOGIC ====================
+    function selectRole(idx) {
+      state.selectedRoleIdx = idx;
+      for (var i = 0; i < 4; i++) {
+        var cardBtn = document.getElementById('role-card-btn-' + i);
+        if (!cardBtn) continue;
+        if (i === idx) {
+          cardBtn.className = "text-left p-4 rounded-xl border-2 border-rose-800 bg-rose-50/50 transition flex flex-col justify-between";
+        } else {
+          cardBtn.className = "text-left p-4 rounded-xl border-2 border-stone-200 bg-white hover:border-stone-300 transition flex flex-col justify-between";
+        }
+      }
+
+      var r = ROLES_DATA[idx];
+      document.getElementById('role-detail-chapter').textContent = r.chapter;
+      document.getElementById('role-detail-title').textContent = r.title;
+      document.getElementById('role-detail-mandate').textContent = r.mandate;
+      document.getElementById('role-detail-condition').textContent = r.condition;
+
+      var qList = document.getElementById('role-detail-questions');
+      qList.innerHTML = '';
+      for (var j = 0; j < r.questions.length; j++) {
+        var li = document.createElement('li');
+        li.textContent = r.questions[j];
+        qList.appendChild(li);
+      }
+
+      document.getElementById('role-member-label').value = state.roleMembers[idx] === ('Director ' + (idx + 1)) ? '' : state.roleMembers[idx];
+      document.getElementById('role-notes-input').value = state.roleNotes[idx] || '';
+      updateRoleVoteUI();
+    }
+
+    function saveRoleMeta() {
+      var idx = state.selectedRoleIdx;
+      var nameVal = document.getElementById('role-member-label').value.trim();
+      state.roleMembers[idx] = nameVal || ('Director ' + (idx + 1));
+      state.roleNotes[idx] = document.getElementById('role-notes-input').value;
+      updateRoleVoteUI();
+    }
+
+    function prefillRoleArgument() {
+      var idx = state.selectedRoleIdx;
+      var sample = ROLES_DATA[idx].sampleNote;
+      document.getElementById('role-notes-input').value = sample;
+      state.roleNotes[idx] = sample;
+      showToast('Inserted sample opening pitch for ' + ROLES_DATA[idx].title);
+    }
+
+    function setRoleVote(approve) {
+      state.roleVotes[state.selectedRoleIdx] = approve;
+      updateRoleVoteUI();
+      showToast('Updated committee vote for Role ' + (state.selectedRoleIdx + 1));
+    }
+
+    function toggleSeatVote(idx) {
+      state.roleVotes[idx] = !state.roleVotes[idx];
+      updateRoleVoteUI();
+    }
+
+    function updateRoleVoteUI() {
+      var approveCount = 0;
+      for (var i = 0; i < 4; i++) {
+        var ok = state.roleVotes[i];
+        if (ok) approveCount++;
+        var pill = document.getElementById('role-vote-pill-' + i);
+        if (pill) {
+          pill.textContent = ok ? 'Vote: Approve' : 'Vote: Dissent';
+          pill.className = ok
+            ? 'px-2 py-0.5 rounded bg-emerald-100 text-emerald-800'
+            : 'px-2 py-0.5 rounded bg-rose-100 text-rose-800';
+        }
+        var seatBtn = document.getElementById('charter-seat-' + i);
+        var seatName = document.getElementById('charter-seat-name-' + i);
+        if (seatBtn && seatName) {
+          seatBtn.className = ok
+            ? 'p-2.5 rounded-lg border border-emerald-300 bg-emerald-50 text-left text-xs transition'
+            : 'p-2.5 rounded-lg border border-rose-300 bg-rose-50 text-left text-xs transition';
+          seatName.textContent = state.roleMembers[i] + (ok ? ' • APPROVE' : ' • DISSENT');
+        }
+      }
+
+      var curApprove = state.roleVotes[state.selectedRoleIdx];
+      var btnApp = document.getElementById('btn-role-approve');
+      var btnDis = document.getElementById('btn-role-dissent');
+      if (btnApp && btnDis) {
+        btnApp.className = curApprove
+          ? 'py-2 px-3 rounded-lg text-xs font-bold bg-emerald-600 text-white transition'
+          : 'py-2 px-3 rounded-lg text-xs font-bold bg-stone-100 text-stone-700 hover:bg-emerald-50 transition';
+        btnDis.className = !curApprove
+          ? 'py-2 px-3 rounded-lg text-xs font-bold bg-rose-700 text-white transition'
+          : 'py-2 px-3 rounded-lg text-xs font-bold bg-stone-100 text-stone-700 hover:bg-rose-50 transition';
+      }
+
+      var tallyBadge = document.getElementById('charter-vote-tally-badge');
+      if (tallyBadge) {
+        var against = 4 - approveCount;
+        if (approveCount >= 3) {
+          tallyBadge.textContent = 'Resolution Adopted: ' + approveCount + ' For / ' + against + ' Against';
+          tallyBadge.className = 'text-xs font-bold px-3 py-1 rounded-full bg-emerald-100 text-emerald-800';
+        } else {
+          tallyBadge.textContent = 'Resolution Blocked: ' + approveCount + ' For / ' + against + ' Against';
+          tallyBadge.className = 'text-xs font-bold px-3 py-1 rounded-full bg-rose-100 text-rose-800';
+        }
+      }
+    }
+
+    // ==================== TAB 3: STRATEGY LAB LOGIC ====================
+    function selectStrategicOption(optKey) {
+      state.selectedOption = optKey;
+      var keys = ['A', 'B', 'C', 'H'];
+      for (var i = 0; i < keys.length; i++) {
+        var k = keys[i];
+        var card = document.getElementById('opt-card-' + k);
+        if (!card) continue;
+        if (k === optKey) {
+          card.className = "text-left p-4 rounded-xl border-2 border-rose-800 bg-rose-50/50 transition flex flex-col justify-between";
+        } else {
+          card.className = "text-left p-4 rounded-xl border-2 border-stone-200 bg-white hover:border-stone-300 transition flex flex-col justify-between";
+        }
+      }
+
+      // Load option preset sliders into Tab 4 simulator
+      var p = OPTIONS_DATA[optKey].presets;
+      document.getElementById('sim-cohort-size').value = p.cohort;
+      document.getElementById('sim-cohorts-yr').value = p.cohortsYr;
+      document.getElementById('sim-price').value = p.price;
+      document.getElementById('sim-scholarship').value = p.scholarship;
+      document.getElementById('sim-cost-cohort').value = p.cost;
+      document.getElementById('sim-sponsor').value = p.sponsor;
+
+      updateStrategyAnalysis();
+      runFeasibilitySim();
+    }
+
+    function getSelectedBPB() {
+      var radios = document.getElementsByName('bpb-mode');
+      for (var i = 0; i < radios.length; i++) {
+        if (radios[i].checked) return radios[i].value;
+      }
+      return "Strategic Alliance (UT / USF / Local Film Guilds)";
+    }
+
+    function updateStrategyAnalysis() {
+      var opt = OPTIONS_DATA[state.selectedOption];
+      document.getElementById('diag-option-name').textContent = opt.name;
+      document.getElementById('diag-scope-desc').textContent = opt.scope;
+      document.getElementById('diag-div-type').textContent = opt.divType + ' • ' + getSelectedBPB();
+      document.getElementById('diag-div-desc').textContent = opt.divDesc;
+      document.getElementById('diag-tradeoff-desc').textContent = opt.tradeoff;
+
+      var vCount = 0;
+      var cCount = 0;
+      for (var i = 0; i < 4; i++) {
+        if (document.getElementById('vd-check-' + i).checked) vCount++;
+        if (document.getElementById('cd-check-' + i).checked) cCount++;
+      }
+      document.getElementById('diag-vc-ratio').textContent = 'Active Drivers: ' + vCount + ' Value (V) / ' + cCount + ' Cost (C)';
+
+      var badge = document.getElementById('diag-status-badge');
+      var bpb = getSelectedBPB();
+      if (vCount >= 2 && cCount >= 2 && bpb.indexOf("Arm's-Length") === -1 && state.selectedOption !== 'B') {
+        badge.textContent = 'Strong Value Innovation (Blue Ocean Fit)';
+        badge.className = 'text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800';
+      } else if (state.selectedOption === 'B' || vCount < 2 || cCount < 2) {
+        badge.textContent = 'Caution: Stuck in the Middle / Cost Risk';
+        badge.className = 'text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800';
+      } else {
+        badge.textContent = 'Warning: Agency / IP Hold-Up Risk';
+        badge.className = 'text-xs font-bold px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800';
+      }
+    }
+
+    function syncStrategyToCharter() {
+      syncAllToCharter();
+      showToast('Synced Ch. 6 & Ch. 8 Strategy Lab choices to the 2027 Pilot Charter.');
+    }
+
+    // ==================== TAB 4: CURVEBALLS & FEASIBILITY SIMULATOR ====================
+    function selectCurveball(cbIdx) {
+      state.activeCurveball = cbIdx;
+      for (var i = 0; i < 4; i++) {
+        var btn = document.getElementById('cb-btn-' + i);
+        if (!btn) continue;
+        if (i === cbIdx) {
+          btn.className = "text-left p-3.5 rounded-xl border-2 border-rose-800 bg-rose-50/60 transition";
+        } else {
+          btn.className = "text-left p-3.5 rounded-xl border-2 border-stone-200 bg-white hover:border-amber-500 transition";
+        }
+      }
+      var headerBadge = document.getElementById('header-curveball-badge');
+      if (headerBadge) {
+        headerBadge.textContent = CURVEBALLS_DATA[cbIdx].title;
+        headerBadge.className = cbIdx === 0
+          ? 'text-xs font-bold px-2 py-0.5 rounded bg-stone-200 text-stone-700'
+          : 'text-xs font-bold px-2 py-0.5 rounded bg-rose-900 text-amber-200';
+      }
+      document.getElementById('curveball-alert-text').textContent = CURVEBALLS_DATA[cbIdx].desc;
+      runFeasibilitySim();
+    }
+
+    function runFeasibilitySim() {
+      var cohortSize = parseInt(document.getElementById('sim-cohort-size').value, 10) || 24;
+      var cohortsYr = parseInt(document.getElementById('sim-cohorts-yr').value, 10) || 16;
+      var price = parseInt(document.getElementById('sim-price').value, 10) || 275;
+      var scholPct = parseInt(document.getElementById('sim-scholarship').value, 10) || 30;
+      var costPerCohort = parseInt(document.getElementById('sim-cost-cohort').value, 10) || 3200;
+      var sponsorOffset = parseInt(document.getElementById('sim-sponsor').value, 10) || 25000;
+
+      document.getElementById('val-cohort-size').textContent = cohortSize + ' participants';
+      document.getElementById('val-cohorts-yr').textContent = cohortsYr + ' cohorts/yr';
+      document.getElementById('val-price').textContent = '$' + price;
+      document.getElementById('val-scholarship').textContent = scholPct + '%';
+      document.getElementById('val-cost-cohort').textContent = '$' + costPerCohort.toLocaleString();
+      document.getElementById('val-sponsor').textContent = '$' + sponsorOffset.toLocaleString();
+
+      var totalStudents = cohortSize * cohortsYr;
+      var freeStudents = Math.round(totalStudents * (scholPct / 100.0));
+      var paidStudents = totalStudents - freeStudents;
+
+      var tuitionRev = paidStudents * price;
+      var grossRev = tuitionRev + sponsorOffset;
+      var totalCost = cohortsYr * costPerCohort;
+      var netContrib = grossRev - totalCost;
+      var breakEvenPaidPerCohort = price > 0 ? Math.ceil(costPerCohort / price) : cohortSize;
+      var earnedSharePct = grossRev > 0 ? Math.min(100, Math.round(((tuitionRev + sponsorOffset * 0.7) / grossRev) * 1000) / 10) : 0;
+
+      document.getElementById('out-total-students').textContent = totalStudents + ' / yr';
+      document.getElementById('out-paid-vs-free').textContent = paidStudents + ' paid • ' + freeStudents + ' Title I';
+      document.getElementById('out-gross-rev').textContent = '$' + grossRev.toLocaleString();
+      document.getElementById('out-cost-total').textContent = 'Delivery Cost: $' + totalCost.toLocaleString();
+      document.getElementById('out-net-contrib').textContent = (netContrib >= 0 ? '+$' : '-$') + Math.abs(netContrib).toLocaleString();
+      document.getElementById('out-net-contrib').className = netContrib >= 0
+        ? 'text-lg font-extrabold text-emerald-700'
+        : 'text-lg font-extrabold text-rose-700';
+      document.getElementById('out-breakeven').textContent = 'Break-even: ' + breakEvenPaidPerCohort + ' paid/cohort';
+      document.getElementById('out-earned-share').textContent = earnedSharePct.toFixed(1) + '%';
+
+      // Compute Milestone 3 Scores (1.0 to 5.0 scale)
+      var finScore = 3.0;
+      if (netContrib >= 35000) finScore += 1.4;
+      else if (netContrib >= 10000) finScore += 0.9;
+      else if (netContrib < 0) finScore -= 1.5;
+      if (earnedSharePct >= 70) finScore += 0.5;
+      else finScore -= 0.6;
+
+      var orgStruct = document.getElementById('sim-org-structure').value;
+      var inputCtrl = document.getElementById('sim-input-control').value;
+      var outputCtrl = document.getElementById('sim-output-control').value;
+      var bpb = getSelectedBPB();
+
+      var opsScore = 4.2;
+      if (cohortsYr > 24) opsScore -= 0.8;
+      if (orgStruct.indexOf('Functional') !== -1) opsScore += 0.5;
+      if (orgStruct.indexOf('Matrix') !== -1 || orgStruct.indexOf('Competitive') !== -1) opsScore -= 0.9;
+      if (inputCtrl.indexOf('Ad-Hoc') !== -1) opsScore -= 1.0;
+
+      var stratScore = 4.0;
+      if (scholPct >= 25) stratScore += 0.6;
+      else if (scholPct < 15) stratScore -= 0.8;
+      if (state.selectedOption === 'A' || state.selectedOption === 'H') stratScore += 0.4;
+      if (outputCtrl.indexOf('only') !== -1) stratScore -= 0.7;
+
+      // Apply Curveball checks
+      var cbCompliant = true;
+      var cbMsg = 'Governance Status: Compliant';
+      if (state.activeCurveball === 1) {
+        if (scholPct < 30) {
+          cbCompliant = false;
+          finScore -= 1.3;
+          stratScore -= 1.2;
+          cbMsg = 'FAILS CURVEBALL 1: Title I Seats < 30%';
+        } else {
+          cbMsg = 'Curveball 1 Resolved: >=30% Title I Quota Met';
+        }
+      } else if (state.activeCurveball === 2) {
+        if (bpb.indexOf("Arm's-Length") !== -1) {
+          cbCompliant = false;
+          finScore -= 1.2;
+          stratScore -= 1.4;
+          cbMsg = 'FAILS CURVEBALL 2: Vendor IP Hold-Up Risk';
+        } else {
+          cbMsg = 'Curveball 2 Resolved: TT Retains Brand & IP';
+        }
+      } else if (state.activeCurveball === 3) {
+        if (cohortsYr > 20 || inputCtrl.indexOf('Off-Peak') === -1 || orgStruct.indexOf('Functional') === -1) {
+          cbCompliant = false;
+          opsScore -= 1.4;
+          cbMsg = 'FAILS CURVEBALL 3: 43-Seat Screen Clash';
+        } else {
+          cbMsg = 'Curveball 3 Resolved: Off-Peak SOP Active';
+        }
+      }
+
+      var cbPill = document.getElementById('curveball-compliance-pill');
+      if (cbPill) {
+        cbPill.textContent = cbMsg;
+        cbPill.className = cbCompliant
+          ? 'font-bold px-2.5 py-1 rounded bg-emerald-100 text-emerald-800'
+          : 'font-bold px-2.5 py-1 rounded bg-rose-100 text-rose-800';
+      }
+
+      finScore = Math.max(1.0, Math.min(5.0, Math.round(finScore * 10) / 10));
+      opsScore = Math.max(1.0, Math.min(5.0, Math.round(opsScore * 10) / 10));
+      stratScore = Math.max(1.0, Math.min(5.0, Math.round(stratScore * 10) / 10));
+      state.simScores = { fin: finScore, ops: opsScore, strat: stratScore };
+
+      var totalFeas = Math.round((finScore + opsScore + stratScore) * 10) / 10;
+      var verdictEl = document.getElementById('sim-overall-verdict');
+      if (verdictEl) {
+        verdictEl.textContent = (totalFeas >= 12.0 && cbCompliant ? 'Feasible (' : 'Needs Adjustment (') + totalFeas.toFixed(1) + ' / 15)';
+        verdictEl.className = (totalFeas >= 12.0 && cbCompliant)
+          ? 'text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800'
+          : 'text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800';
+      }
+
+      if (feasibilityChart) {
+        feasibilityChart.data.datasets[0].data = [finScore, opsScore, stratScore];
+        feasibilityChart.update();
+      }
+    }
+
+    function syncSimToCharter() {
+      syncAllToCharter();
+      switchTab('charter');
+      showToast('Applied Pro Forma & Governance Controls to the 2027 Pilot Charter.');
+    }
+
+    // ==================== TAB 5: PILOT CHARTER & RUBRIC ====================
+    function syncAllToCharter() {
+      var opt = OPTIONS_DATA[state.selectedOption];
+      var cohortSize = document.getElementById('sim-cohort-size').value;
+      var cohortsYr = document.getElementById('sim-cohorts-yr').value;
+      var price = document.getElementById('sim-price').value;
+      var scholPct = document.getElementById('sim-scholarship').value;
+      var costPerCohort = document.getElementById('sim-cost-cohort').value;
+      var sponsorOffset = document.getElementById('sim-sponsor').value;
+      var orgStruct = document.getElementById('sim-org-structure').value;
+      var inputCtrl = document.getElementById('sim-input-control').value;
+      var outputCtrl = document.getElementById('sim-output-control').value;
+
+      document.getElementById('charter-field-1').value = opt.name + " — " + opt.scope;
+      document.getElementById('charter-field-2').value = "Primary fee-paying youth/adult participants at $" + price + "/seat, paired with a " + scholPct + "% Title I scholarship quota underwritten by $" + parseInt(sponsorOffset, 10).toLocaleString() + "/yr in daytime corporate seminars & partner sponsorships.";
+      document.getElementById('charter-field-3').value = "Raise Value (V): Red-carpet student premiere in 43-seat / 1,200-seat theater + filmmaker coaching. Contain Cost (C): Reusable modular curriculum, shared camera/editing gear, and repeatable cohort templates.";
+      document.getElementById('charter-field-4').value = getSelectedBPB() + " — Tampa Theatre retains 100% ownership of curriculum IP, brand, and participant data.";
+      document.getElementById('charter-field-5').value = "Max " + cohortSize + " students per cohort across " + cohortsYr + " cohorts/yr in the 3,000-sq-ft wing; full delivery cost of $" + parseInt(costPerCohort, 10).toLocaleString() + "/cohort; student premieres scheduled in off-peak Saturday AM slots.";
+      document.getElementById('charter-field-6').value = "Accountable Owner: Dedicated Education Program Manager operating inside a " + orgStruct + " with Marketing, Box Office, and Historic Operations.";
+      document.getElementById('charter-field-7').value = "Input Control: " + inputCtrl + ". Output KPI: " + outputCtrl + ".";
+      document.getElementById('charter-field-8').value = "12-Month Stop/Go Gate: Continue & expand in 2028 only if Year 1 achieves >=75% seat utilization, positive net earned contribution (" + document.getElementById('out-net-contrib').textContent + " projected), and >=30% Title I community access.";
+      saveCharterState();
+    }
+
+    function saveCharterState() {
+      try {
+        var payload = {
+          table: document.getElementById('charter-table-num').value,
+          f1: document.getElementById('charter-field-1').value,
+          f2: document.getElementById('charter-field-2').value,
+          f3: document.getElementById('charter-field-3').value,
+          f4: document.getElementById('charter-field-4').value,
+          f5: document.getElementById('charter-field-5').value,
+          f6: document.getElementById('charter-field-6').value,
+          f7: document.getElementById('charter-field-7').value,
+          f8: document.getElementById('charter-field-8').value
+        };
+        localStorage.setItem('mgt431_tt_charter', JSON.stringify(payload));
+      } catch (e) {}
+    }
+
+    function copyCharterToClipboard() {
+      var lines = [
+        "TAMPA THEATRE 2027 EDUCATION WING — BINDING PILOT CHARTER (" + document.getElementById('charter-table-num').value + ")",
+        "1. Option & Scope: " + document.getElementById('charter-field-1').value,
+        "2. Paying Audience & Pricing: " + document.getElementById('charter-field-2').value,
+        "3. Value (V) & Cost (C) Drivers: " + document.getElementById('charter-field-3').value,
+        "4. Build-Partner-Buy Mode: " + document.getElementById('charter-field-4').value,
+        "5. Capacity & Full Delivery Cost: " + document.getElementById('charter-field-5').value,
+        "6. Accountable Owner & Structure: " + document.getElementById('charter-field-6').value,
+        "7. Input & Output Controls: " + document.getElementById('charter-field-7').value,
+        "8. 12-Month Continuation Gate: " + document.getElementById('charter-field-8').value,
+        "Board Vote Status: " + document.getElementById('charter-vote-tally-badge').textContent
+      ].join("\n\n");
+
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(lines).then(function() {
+            showToast('Copied 2027 Pilot Charter summary to clipboard!');
+          }).catch(function() {
+            fallbackCopy(lines);
+          });
+        } else {
+          fallbackCopy(lines);
+        }
+      } catch (e) {
+        fallbackCopy(lines);
+      }
+    }
+
+    function fallbackCopy(text) {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        document.execCommand('copy');
+        showToast('Copied 2027 Pilot Charter summary to clipboard!');
+      } catch (e) {
+        showToast('Charter ready to print or copy.');
+      }
+      document.body.removeChild(ta);
+    }
+
+    function updateRubricScore() {
+      var total = 0;
+      for (var i = 0; i < 4; i++) {
+        var v = parseInt(document.getElementById('rubric-slider-' + i).value, 10) || 23;
+        document.getElementById('rubric-val-' + i).textContent = v + ' / 25';
+        total += v;
+      }
+      document.getElementById('rubric-total-display').textContent = total + ' / 100';
+    }
+
+    // ==================== CHART.JS INITIALIZATION ====================
+    function initCharts() {
+      var ctx1 = document.getElementById('chart-industry-boxoffice');
+      if (ctx1 && window.Chart) {
+        industryChart = new Chart(ctx1, {
+          type: 'bar',
+          data: {
+            labels: ['2018', '2019', '2020', '2021', '2022', '2023', '2024', '2025'],
+            datasets: [{
+              label: 'US & Canada Box Office ($B)',
+              data: [11.89, 11.32, 2.10, 4.48, 7.37, 8.91, 8.57, 8.66],
+              backgroundColor: ['#7c1f34', '#7c1f34', '#d6d3d1', '#a8a29e', '#b45309', '#9a3412', '#9a3412', '#6b1d2f'],
+              borderRadius: 5
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                max: 14,
+                ticks: { callback: function(v) { return '$' + v + 'B'; } }
+              }
+            }
+          }
+        });
+      }
+
+      var ctx2 = document.getElementById('chart-tt-revenue');
+      if (ctx2 && window.Chart) {
+        revenueChart = new Chart(ctx2, {
+          type: 'doughnut',
+          data: {
+            labels: [
+              'Earned Revenue: Tickets, Concessions & Rentals ($3.15M / 70%)',
+              'Public & Private Grants/Donations: City, County, Corporate & Members ($1.35M / 30%)'
+            ],
+            datasets: [{
+              data: [3.15, 1.35],
+              backgroundColor: ['#6b1d2f', '#d97706'],
+              borderWidth: 2,
+              borderColor: '#ffffff'
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: 'bottom',
+                labels: { boxWidth: 12, font: { size: 11 } }
+              }
+            }
+          }
+        });
+      }
+
+      var ctx3 = document.getElementById('chart-feasibility-scores');
+      if (ctx3 && window.Chart) {
+        feasibilityChart = new Chart(ctx3, {
+          type: 'bar',
+          data: {
+            labels: [
+              'Financial Feasibility (Ch. 6 & 12)',
+              'Operational Feasibility (Ch. 8 & 11)',
+              'Strategic & Mission Fit (Ch. 6, 8 & 12)'
+            ],
+            datasets: [{
+              label: 'Milestone 3 Score (Max 5.0)',
+              data: [4.5, 4.4, 4.6],
+              backgroundColor: ['#6b1d2f', '#0f766e', '#b45309'],
+              borderRadius: 6
+            }]
+          },
+          options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false }
+            },
+            scales: {
+              x: {
+                beginAtZero: true,
+                max: 5.0
+              }
+            }
+          }
+        });
+      }
+    }
+
+    // ==================== INITIALIZATION ====================
+    window.onload = function() {
+      initCharts();
+      selectRole(0);
+      selectStrategicOption('H');
+      syncAllToCharter();
+      updateTimerUI();
+      updateRubricScore();
+    };
+  </script>
+</body>
+</html>
+# Tampa Theatre Board Simulation — MGT 431
+
+A browser-based classroom simulation with generic board roles and strategic options, a 50-minute timer, curveballs, feasibility calculations, voting, and a pilot charter.
+
+## Publish with GitHub Pages
+
+1. Create a GitHub repository named `tampa-theatre-simulation`. For a standard free personal account, use a public repository.
+2. Extract this ZIP on your computer.
+3. In the repository, choose **Add file > Upload files**. Upload `index.html`, `README.md`, and `.nojekyll` into the repository root, then commit. Do not upload the ZIP itself or put index.html inside a nested folder. If Windows hides `.nojekyll`, the simulation can still be published with index.html and README.md.
+4. Open **Settings > Pages**.
+5. Under **Build and deployment**, choose **Deploy from a branch**. Choose `main` and `/(root)`, then Save.
+6. Once deployment finishes, open the site URL shown in Pages settings. Its usual form is `https://YOUR-USERNAME.github.io/tampa-theatre-simulation/`.
+7. Share that published website URL in Canvas. Students do not need GitHub accounts to visit the public site.
+
+Official instructions: https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site
+
+## Student use
+
+Open the website, assign generic board roles, and work through the five tabs. Use one device per board table for a common set of decisions. Each browser runs its own simulation; decisions and timers are not synchronized across devices.
+
+At the end, use **Copy Charter** to copy the charter into a document, or **Print / Save PDF**, and submit the result to the Canvas assignment specified by your instructor. Check the saved document before closing the simulation. This app does not submit work to Canvas or collect results centrally. Do not rely on refreshing the page to restore your work; the existing code writes some charter data locally but does not restore it on startup.
+
+## Running and editing
+
+Open `index.html` in a browser to run locally, or publish it as above. Internet access is needed for Tailwind CSS, Chart.js, and Google Fonts. There is no build step, installation, API key, or backend.
+
+All HTML, styling, and JavaScript are in `index.html`. Strategy definitions are in `OPTIONS_DATA`; role briefs are in `ROLES_DATA`; shocks are in `CURVEBALLS_DATA`. Review case figures and teaching assumptions before classroom use. Publishing the repository makes its source and teaching content publicly accessible.
+
+## Validation
+
+The inline JavaScript was checked with `node --check`. The package preserves the supplied simulation behavior; a full browser interaction test has not been performed for this packaging step.
+
